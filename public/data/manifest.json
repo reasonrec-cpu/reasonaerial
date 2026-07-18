@@ -1,0 +1,33 @@
+{
+  "dataset": "reason-drone-airspace",
+  "source": "交通部民用航空局（範例資料，尚未首次同步）",
+  "generated_at_utc": "1970-01-01T00:00:00+00:00",
+  "generated_at_taipei": "範例資料（待首次同步）",
+  "layer_count": 3,
+  "layers": [
+    {
+      "slug": "uav_restricted_airspace",
+      "title": "禁限航區（主空域）",
+      "color": "#e53935",
+      "feature_count": 3,
+      "geojson": "data/uav_restricted_airspace.geojson",
+      "kml": "data/uav_restricted_airspace.kml"
+    },
+    {
+      "slug": "national_park",
+      "title": "國家公園",
+      "color": "#43a047",
+      "feature_count": 1,
+      "geojson": "data/national_park.geojson",
+      "kml": "data/national_park.kml"
+    },
+    {
+      "slug": "commercial_port",
+      "title": "商港區",
+      "color": "#1e88e5",
+      "feature_count": 1,
+      "geojson": "data/commercial_port.geojson",
+      "kml": "data/commercial_port.kml"
+    }
+  ]
+}

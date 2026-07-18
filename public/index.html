@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>台灣無人機空域圖 · 禁限航區即時查詢</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<style>
+  html,body{margin:0;height:100%;font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif}
+  #map{position:absolute;inset:0}
+  .legend{background:rgba(255,255,255,.94);padding:10px 12px;border-radius:10px;
+    box-shadow:0 1px 6px rgba(0,0,0,.25);font-size:13px;line-height:1.7;color:#222}
+  .legend h4{margin:0 0 6px;font-size:13px;font-weight:700}
+  .legend .row{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none}
+  .legend .row.off{opacity:.4}
+  .legend .sw{width:14px;height:14px;border-radius:3px;flex:0 0 auto}
+  .legend .meta{margin-top:8px;padding-top:6px;border-top:1px solid #eee;color:#666;font-size:11px}
+  .leaflet-popup-content{font-size:13px;max-width:280px;max-height:260px;overflow:auto}
+  .leaflet-popup-content table{border-collapse:collapse;width:100%}
+  .leaflet-popup-content th{text-align:left;color:#555;padding:2px 8px 2px 0;
+    white-space:nowrap;vertical-align:top;font-weight:600}
+  .leaflet-popup-content td{padding:2px 0;vertical-align:top}
+  .leaflet-popup-content h3{margin:0 0 6px;font-size:14px}
+  .banner{position:absolute;left:0;right:0;bottom:0;z-index:500;background:rgba(30,30,30,.82);
+    color:#fff;font-size:11px;padding:4px 10px;text-align:center}
+  .banner a{color:#9cd}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div class="banner">
+  資料來源：交通部民用航空局（僅供參考，實際飛行以主管機關最新公告為準）·
+  本圖每日自動同步
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+const DATA_BASE = "./";                 // 資料與本頁同源（GitHub Pages）
+const map = L.map("map", {zoomControl:true}).setView([23.7, 120.9], 8);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  maxZoom: 19,
+  attribution: '&copy; OpenStreetMap contributors'
+}).addTo(map);
+
+// 需要顯示的欄位順序（存在才顯示）
+const FIELDS = ["空域類別名稱","限制區","空域說明","主管機關名稱","會商機關名稱",
+                "有效日期起","有效日期迄","聯絡方式","罰則"];
+
+function popupHtml(props){
+  const name = props["空域名稱"] || props["name"] || props["NAME"] || "區域";
+  let rows = "";
+  for (const k of FIELDS){
+    const v = props[k];
+    if (v !== undefined && v !== null && String(v).trim() !== "")
+      rows += `<tr><th>${k}</th><td>${String(v)}</td></tr>`;
+  }
+  return `<h3>${name}</h3><table>${rows}</table>`;
+}
+
+const legend = L.control({position:"topright"});
+legend.onAdd = function(){
+  this._div = L.DomUtil.create("div","legend");
+  this._div.innerHTML = "<h4>圖層</h4><div id='legend-rows'>載入中…</div>" +
+                        "<div class='meta' id='legend-meta'></div>";
+  L.DomEvent.disableClickPropagation(this._div);
+  return this._div;
+};
+legend.addTo(map);
+
+const overlays = {};   // slug -> L.geoJSON
+
+function styleFor(color){
+  return {color:color, weight:1.5, fillColor:color, fillOpacity:0.18};
+}
+
+async function loadLayer(layer){
+  try{
+    const res = await fetch(DATA_BASE + layer.geojson, {cache:"no-cache"});
+    if(!res.ok) throw new Error(res.status);
+    const gj = await res.json();
+    const lyr = L.geoJSON(gj, {
+      style: styleFor(layer.color),
+      pointToLayer: (f,latlng)=>L.circleMarker(latlng,{radius:5,...styleFor(layer.color)}),
+      onEachFeature: (f,l)=> l.bindPopup(popupHtml(f.properties||{}))
+    });
+    overlays[layer.slug] = lyr;
+    lyr.addTo(map);
+    return lyr;
+  }catch(e){ console.warn("圖層載入失敗", layer.slug, e); return null; }
+}
+
+function buildLegendRow(layer){
+  const row = document.createElement("div");
+  row.className = "row";
+  row.innerHTML = `<span class="sw" style="background:${layer.color}"></span>` +
+                  `<span>${layer.title}<span style="color:#999"> (${layer.feature_count??"–"})</span></span>`;
+  row.onclick = ()=>{
+    const lyr = overlays[layer.slug]; if(!lyr) return;
+    if(map.hasLayer(lyr)){ map.removeLayer(lyr); row.classList.add("off"); }
+    else { map.addLayer(lyr); row.classList.remove("off"); }
+  };
+  return row;
+}
+
+(async function init(){
+  let manifest;
+  try{
+    manifest = await (await fetch(DATA_BASE+"data/manifest.json",{cache:"no-cache"})).json();
+  }catch(e){
+    document.getElementById("legend-rows").textContent = "尚無資料（等待首次同步）";
+    return;
+  }
+  const rowsEl = document.getElementById("legend-rows");
+  rowsEl.innerHTML = "";
+  // 依 manifest 載入，行政區界預設關閉（純參考）
+  for (const layer of manifest.layers){
+    rowsEl.appendChild(buildLegendRow(layer));
+    await loadLayer(layer);
+    if (layer.slug === "county" && overlays.county){ map.removeLayer(overlays.county);
+      rowsEl.lastChild.classList.add("off"); }
+  }
+  document.getElementById("legend-meta").innerHTML =
+    "更新：" + (manifest.generated_at_taipei || "—") + "（台北時間）";
+})();
+</script>
+</body>
+</html>
