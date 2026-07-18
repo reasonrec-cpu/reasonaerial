@@ -18,6 +18,7 @@
 from __future__ import annotations
 
 import json
+import math
 import ssl
 import sys
 import time
@@ -174,6 +175,99 @@ def geojson_to_kml(fc: dict, name: str, color_hex: str) -> str:
     )
 
 
+def _perp_dist(p, a, b) -> float:
+    (x, y), (x1, y1), (x2, y2) = p, a, b
+    dx, dy = x2 - x1, y2 - y1
+    if dx == 0 and dy == 0:
+        return math.hypot(x - x1, y - y1)
+    t = ((x - x1) * dx + (y - y1) * dy) / (dx * dx + dy * dy)
+    t = max(0.0, min(1.0, t))
+    return math.hypot(x - (x1 + t * dx), y - (y1 + t * dy))
+
+
+def _dp(points, tol):
+    """Douglas–Peucker（疊代版，避免遞迴深度問題）。"""
+    n = len(points)
+    if n < 3:
+        return list(points)
+    keep = [False] * n
+    keep[0] = keep[n - 1] = True
+    stack = [(0, n - 1)]
+    while stack:
+        s, e = stack.pop()
+        maxd, idx = 0.0, -1
+        a, b = points[s], points[e]
+        for i in range(s + 1, e):
+            d = _perp_dist(points[i], a, b)
+            if d > maxd:
+                maxd, idx = d, i
+        if idx != -1 and maxd > tol:
+            keep[idx] = True
+            stack.append((s, idx))
+            stack.append((idx, e))
+    return [points[i] for i in range(n) if keep[i]]
+
+
+def _round_ring(ring, nd):
+    return [[round(pt[0], nd), round(pt[1], nd)] for pt in ring]
+
+
+def _simplify_ring(ring, tol, nd):
+    r = _round_ring(ring, nd)
+    if len(r) <= 4:
+        return r
+    s = _dp(r, tol)
+    if len(s) < 4:  # 過度簡化 → 保留（略）粗化版
+        s = r[:: max(1, len(r) // 8)]
+        if s[0] != s[-1]:
+            s.append(s[0])
+    if s[0] != s[-1]:
+        s.append(s[0])
+    return s
+
+
+def optimize_geometry(geom, tol=0.00012, nd=6):
+    """簡化 + 降精度，大幅減少頂點與檔案大小（對無人機參考圖資影響可忽略）。"""
+    if not geom:
+        return geom, 0, 0
+    gtype = geom.get("type")
+    coords = geom.get("coordinates")
+    before = after = 0
+    if gtype == "Polygon":
+        new = []
+        for ring in coords:
+            before += len(ring)
+            sr = _simplify_ring(ring, tol, nd)
+            after += len(sr)
+            new.append(sr)
+        return {"type": "Polygon", "coordinates": new}, before, after
+    if gtype == "MultiPolygon":
+        new = []
+        for poly in coords:
+            np = []
+            for ring in poly:
+                before += len(ring)
+                sr = _simplify_ring(ring, tol, nd)
+                after += len(sr)
+                np.append(sr)
+            new.append(np)
+        return {"type": "MultiPolygon", "coordinates": new}, before, after
+    return geom, 0, 0
+
+
+def optimize_fc(fc: dict) -> dict:
+    tot_b = tot_a = 0
+    for f in fc.get("features", []):
+        g, b, a = optimize_geometry(f.get("geometry"))
+        f["geometry"] = g
+        tot_b += b
+        tot_a += a
+    if tot_b:
+        pct = 100 * (1 - tot_a / tot_b)
+        print(f"  · 幾何簡化：頂點 {tot_b} → {tot_a}（減少 {pct:.0f}%）", flush=True)
+    return fc
+
+
 def build_diag(fc: dict) -> dict:
     """輸出診斷資訊：欄位名稱、可能的類別欄位與其值分佈、樣本、座標格式。"""
     feats = fc.get("features", [])
@@ -231,6 +325,7 @@ def main() -> int:
     for layer in layers:
         print(f"→ 抓取 {layer['slug']} ({layer['title']}) ...", flush=True)
         fc = fetch_layer(layer)
+        fc = optimize_fc(fc)   # 簡化幾何 + 降精度，讓數千筆能順利繪製
         n = fc["metadata"]["feature_count"]
 
         (out / f"{layer['slug']}.geojson").write_text(
