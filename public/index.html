@@ -235,13 +235,12 @@ window.contactCTA=function(){
   }
   window.__ctaBody=body;
   const url=`mailto:${BRAND.email}?subject=${encodeURIComponent("空拍諮詢 - 拍攝範圍")}&body=${encodeURIComponent(body)}`;
-  // 嘗試開啟郵件程式（用 a 標籤點擊，較 location.href 可靠，iframe 內也較不會被擋）
-  try{ const a=document.createElement("a"); a.href=url; a.target="_blank"; a.rel="noopener";
-    a.style.display="none"; document.body.appendChild(a); a.click(); a.remove(); }catch(e){}
-  // 備援：即使裝置沒有預設郵件程式也能用——顯示信箱與複製鈕
+  // 沿用原本可正常運作的方式開啟郵件（不開新分頁、不被彈窗攔截）
+  window.location.href=url;
+  // 無害備援：顯示信箱與複製鈕，供沒有預設郵件程式的裝置使用
   setReadout(
     (ranges.length?`已帶入 ${ranges.length} 個拍攝範圍。`:"")+
-    `<div style="margin:5px 0">若郵件沒有自動開啟：`+
+    `<div style="margin:5px 0">若郵件未自動開啟：`+
     `<button class="btn primary" style="margin-left:4px" onclick="copyInquiry()">複製諮詢內容</button></div>`+
     `<div style="font-size:12px">或直接寄到 <a href="mailto:${BRAND.email}">${BRAND.email}</a></div>`);
 };
