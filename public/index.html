@@ -230,12 +230,26 @@ window.contactCTA=function(){
             `邊界點位（緯度, 經度）：\n${pts}\n`+
             `空域狀態：${z.length? z.map(x=>nameOf(x)+"("+catLabelOf(x)+")").join("、") : "未壓到已收錄禁/限航區"}\n\n`; });
     if(importedAreas.length || savedMarkers.length) body+="地圖連結："+shareState()+"\n";
-    setMsg("已帶入 "+ranges.length+" 個範圍，開啟郵件中…");
   } else {
     body+="（提示：可先用「測面積」在地圖圈出想拍的範圍，或到「導入」貼上座標，再按此鈕就會自動帶入座標與空域狀態）\n";
-    setMsg("尚未畫出範圍，已開一般諮詢信");
   }
-  window.location.href=`mailto:${BRAND.email}?subject=${encodeURIComponent("空拍諮詢 - 拍攝範圍")}&body=${encodeURIComponent(body)}`;
+  window.__ctaBody=body;
+  const url=`mailto:${BRAND.email}?subject=${encodeURIComponent("空拍諮詢 - 拍攝範圍")}&body=${encodeURIComponent(body)}`;
+  // 嘗試開啟郵件程式（用 a 標籤點擊，較 location.href 可靠，iframe 內也較不會被擋）
+  try{ const a=document.createElement("a"); a.href=url; a.target="_blank"; a.rel="noopener";
+    a.style.display="none"; document.body.appendChild(a); a.click(); a.remove(); }catch(e){}
+  // 備援：即使裝置沒有預設郵件程式也能用——顯示信箱與複製鈕
+  setReadout(
+    (ranges.length?`已帶入 ${ranges.length} 個拍攝範圍。`:"")+
+    `<div style="margin:5px 0">若郵件沒有自動開啟：`+
+    `<button class="btn primary" style="margin-left:4px" onclick="copyInquiry()">複製諮詢內容</button></div>`+
+    `<div style="font-size:12px">或直接寄到 <a href="mailto:${BRAND.email}">${BRAND.email}</a></div>`);
+};
+window.copyInquiry=function(){
+  const t=window.__ctaBody||"";
+  if(navigator.clipboard && navigator.clipboard.writeText)
+    navigator.clipboard.writeText(t).then(()=>setMsg("已複製諮詢內容，貼到你的郵件／訊息即可")).catch(()=>setMsg("複製失敗，請手動選取"));
+  else setMsg("此環境不支援自動複製，請手動選取");
 };
 
 // 面板不要把點擊事件傳到地圖
@@ -427,8 +441,8 @@ function distToGeomM(latlng,geom){
   return best;
 }
 function nearestProhibitedHtml(latlng){
-  if(curMatches.some(r=>catOf(r.feature.properties||{})==="prohibited"))
-    return `<span class="status-warn">⚠ 您已在禁航區內，禁止飛航</span>`;
+  // 此點已落在管制區內時不顯示距離(下方清單已列出實際區域)；不做任何能否飛行的判斷
+  if(curMatches.length) return "";
   const cands=[];
   for(const r of records){ if(!r.bounds || catOf(r.feature.properties||{})!=="prohibited") continue;
     cands.push({r, db:distToBoundsM(latlng,r.bounds)}); }
@@ -438,8 +452,7 @@ function nearestProhibitedHtml(latlng){
   for(let i=0;i<Math.min(cands.length,25);i++){ const d=distToGeomM(latlng,cands[i].r.feature.geometry); if(d<best)best=d; }
   if(!isFinite(best)) return "";
   const txt = best<1000 ? `約 ${best.toFixed(0)} 公尺` : `約 ${(best/1000).toFixed(1)} 公里`;
-  const style = best<500 ? ' style="color:#c62828;font-weight:700"' : '';
-  return `<span${style}>距最近禁航區${txt}</span>`;
+  return `<span style="color:#555">最近禁航區距離：${txt}</span>`;
 }
 function goldenText(sr,ss){
   const add=(t,m)=>{ const a=t.split(":").map(Number); let tot=(a[0]*60+a[1]+m+1440)%1440;
