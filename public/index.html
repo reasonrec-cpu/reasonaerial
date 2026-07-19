@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>無人機空域查詢地圖｜查禁航區、限航區，輕鬆準備空域申請 - 瑞森航拍</title>
-<meta name="description" content="飛行前，先在地圖上看看這裡的空域狀況。輕鬆查詢禁航區、限航區範圍，圖資每日與民航局同步；也能測距、測面積，匯入預定範圍自動計算空域數，並匯出 KML／GeoJSON／Shapefile 方便後續申請。由台南空拍團隊瑞森航拍用心整理。">
+<meta name="description" content="飛行前，先在地圖上看看這裡的空域狀況。輕鬆查詢禁航區、限航區範圍，圖資每日與民航局同步；也能測距、測面積，匯入預定範圍自動計算空域數，並匯出 KML／GeoJSON 方便後續申請。由台南空拍團隊瑞森航拍用心整理。">
 <meta name="keywords" content="無人機空域,禁航區,限航區,空域查詢,空域申請,民航局,UAV,空拍,Drone,瑞森航拍">
 <meta name="author" content="瑞森航拍 www.reasonaerial.com">
 <link rel="canonical" href="https://map.reasonaerial.com/">
@@ -231,7 +231,6 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
-<script src="https://unpkg.com/@mapbox/shp-write@0.4.3/shpwrite.js"></script>
 <script>
 /* ===================== 基本地圖 ===================== */
 const DATA_BASE = "./";
@@ -1167,8 +1166,7 @@ function renderSavedAreas(){
       `<div style="font-size:11px;color:#777;margin:2px 0 0">${items.join("、")}${over?' ⚠需拆件':''}</div>`+
       `<div class="btnrow" style="margin:4px 0 0">`+
       `<button class="btn" style="padding:3px 7px" onclick="exportApply(${r.id},'geojson')">GeoJSON</button>`+
-      `<button class="btn" style="padding:3px 7px" onclick="exportApply(${r.id},'kml')">KML</button>`+
-      `<button class="btn" style="padding:3px 7px" onclick="exportApply(${r.id},'shp')">Shapefile</button></div>`;
+      `<button class="btn" style="padding:3px 7px" onclick="exportApply(${r.id},'kml')">KML</button></div>`;
     el.appendChild(d);
   });
 }
@@ -1211,11 +1209,6 @@ window.exportApply=function(id,fmt){
   const safe=(r.name||"申請區").replace(/[\\\/:*?"<>|]/g,"_");
   if(fmt==="geojson"){ downloadText(JSON.stringify(areaGeoJSON(r)), safe+".geojson", "application/geo+json"); setMsg("已匯出 GeoJSON（座標順時鐘）"); return; }
   if(fmt==="kml"){ downloadText(areaKML(r), safe+".kml", "application/vnd.google-earth.kml+xml"); setMsg("已匯出 KML（座標順時鐘）"); return; }
-  if(fmt==="shp"){
-    if(typeof shpwrite==="undefined"){ setMsg("Shapefile 元件未載入，請改用 GeoJSON 或 KML"); return; }
-    try{ shpwrite.download(areaGeoJSON(r),{folder:safe,types:{polygon:safe}}); setMsg("已匯出 Shapefile(zip)"); }
-    catch(e){ setMsg("Shapefile 匯出失敗，請改用 GeoJSON／KML"); }
-  }
 };
 
 
