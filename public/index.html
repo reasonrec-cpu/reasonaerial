@@ -132,6 +132,11 @@
   .status-ok{color:#2e7d32;font-weight:700}
   .status-warn{color:#c62828;font-weight:700}
   .vtx{width:14px;height:14px;border-radius:50%;background:#1565c0;border:2px solid #fff;box-shadow:0 0 0 1px #1565c0}
+  .myloc-dot{position:relative;width:16px;height:16px;border-radius:50%;background:#1a73e8;border:3px solid #fff;
+    box-shadow:0 0 0 2px rgba(26,115,232,.5),0 1px 4px rgba(0,0,0,.4)}
+  .myloc-dot::after{content:"";position:absolute;left:50%;top:50%;width:16px;height:16px;border-radius:50%;
+    transform:translate(-50%,-50%);background:rgba(26,115,232,.35);animation:mylocPulse 1.8s ease-out infinite;pointer-events:none}
+  @keyframes mylocPulse{0%{width:16px;height:16px;opacity:.7}100%{width:48px;height:48px;opacity:0}}
   .brandbar{display:flex;align-items:center;gap:6px;margin:-2px 0 8px}
   .brandbar .brandname{font-weight:800;font-size:13px;color:var(--brand,#0e7490);white-space:nowrap}
   .brandbar img{height:20px;width:auto}
@@ -164,7 +169,7 @@
       <input id="locInput" placeholder="地址或座標(緯,經)如 25.03,121.5">
       <button class="btn primary" onclick="goLocate()">定位</button>
     </div>
-    <button class="btn" style="width:100%;margin-bottom:6px" onclick="locateMe()">📍 定位我的位置（我現在能飛嗎）</button>
+    <button class="btn" id="locateBtn" style="width:100%;margin-bottom:6px" onclick="locateMe()">📍 定位我的位置（持續顯示）</button>
     <div class="btnrow">
       <button class="btn" onclick="undoPoint()">移除最後一點</button>
       <button class="btn" onclick="clearTool()">清除</button>
@@ -384,13 +389,75 @@ function areaUnitSelectHtml(){
 window.onAreaUnit=function(v){ areaUnitSel=v; redrawMeasure(); };
 // 解析座標輸入；台灣 lat 21~26、lng 118~123，必要時自動對調
 function parseCoord(str){
-  const m = String(str).trim().match(/^(-?\d+(?:\.\d+)?)\s*[,\s]\s*(-?\d+(?:\.\d+)?)$/);
+  let t=String(str).trim()
+    .replace(/[（）()［］\[\]]/g," ")   // 去括號
+    .replace(/[，、]/g,",")               // 全形逗號轉半形
+    .replace(/\s+/g," ").trim();
+  const m = t.match(/^(-?\d+(?:\.\d+)?)\s*[,\s]\s*(-?\d+(?:\.\d+)?)$/);
   if(!m) return null;
   let a=parseFloat(m[1]), b=parseFloat(m[2]);
   let lat=a, lng=b;
   if(!(a>=18 && a<=27) && (b>=18 && b<=27)){ lat=b; lng=a; } // 疑似 lng,lat → 對調
   if(lat<-90||lat>90||lng<-180||lng>180) return null;
   return L.latLng(lat,lng);
+}
+/* ===================== Plus Code（Open Location Code）解析 ===================== */
+const OLC=(function(){
+  const A="23456789CFGHJMPQRVWX", ROWS=5, COLS=4;
+  function clip(l){return Math.min(90,Math.max(-90,l));}
+  function nlng(l){ while(l<-180)l+=360; while(l>=180)l-=360; return l; }
+  function decode(code){
+    code=code.replace("+","").replace(/0+$/,"").toUpperCase();
+    const n=code.length; let lat=-90,lng=-180,latRes=20,lngRes=20;
+    const pl=Math.min(n,10);
+    for(let i=0;i<pl;i+=2){
+      lat+=A.indexOf(code[i])*latRes; lng+=A.indexOf(code[i+1])*lngRes;
+      if(i<pl-2){ latRes/=20; lngRes/=20; }
+    }
+    let latPrec=latRes,lngPrec=lngRes;
+    if(n>10){ let glat=latRes,glng=lngRes;
+      for(let g=10;g<n;g++){ const v=A.indexOf(code[g]); const row=Math.floor(v/COLS),col=v%COLS;
+        glat/=ROWS; glng/=COLS; lat+=row*glat; lng+=col*glng; latPrec=glat; lngPrec=glng; } }
+    return {latC:lat+latPrec/2, lngC:lng+lngPrec/2};
+  }
+  function encPrefix(lat,lng,len){ // pair 段（len≤8）
+    lat=clip(lat)+90; lng=nlng(lng)+180; let code="",latRes=20,lngRes=20;
+    for(let i=0;i<len;i+=2){
+      const ld=Math.min(19,Math.floor(lat/latRes)); lat-=ld*latRes;
+      const gd=Math.min(19,Math.floor(lng/lngRes)); lng-=gd*lngRes;
+      code+=A[ld]+A[gd]; latRes/=20; lngRes/=20;
+    }
+    return code;
+  }
+  function isFull(pc){ return pc.indexOf("+")===8; }
+  function recover(pc, refLat, refLng){
+    pc=pc.toUpperCase();
+    if(isFull(pc)){ const d=decode(pc); return [d.latC,d.lngC]; }
+    const toRec=8-pc.indexOf("+");
+    const res=Math.pow(20, 2-(toRec/2)), half=res/2;
+    const d=decode(encPrefix(refLat,refLng,toRec)+pc);
+    let la=d.latC, lo=d.lngC;
+    const dLat=la-refLat; if(dLat>half)la-=res; else if(dLat<-half)la+=res;
+    const dLng=lo-refLng; if(dLng>half)lo-=res; else if(dLng<-half)lo+=res;
+    return [la,lo];
+  }
+  return {decode, recover, isFull};
+})();
+function findPlusCode(s){
+  const m=String(s).toUpperCase().match(/([23456789CFGHJMPQRVWX]{2,8}\+[23456789CFGHJMPQRVWX]{2,3})/);
+  return m?m[1]:null;
+}
+// 地址清洗：去郵遞區號、國名，產生幾組寬鬆變體以提高命中率（體驗接近 Google）
+function addrVariants(v){
+  let b=String(v).replace(/^\s*\d{3,6}\s*/,"").replace(/^(台灣|臺灣)/,"").trim();
+  const set=[]; const push=x=>{ x=(x||"").trim(); if(x && set.indexOf(x)<0) set.push(x); };
+  push(b);
+  const noFloor=b.replace(/\d+\s*(樓|F).*$/i,"").trim();
+  push(noFloor);
+  const noLi=noFloor.replace(/(區|鄉|鎮|市)[^0-9A-Za-z\s]{2,3}里/,"$1");     // 去「○○里」但保留區/市
+  push(noLi);
+  push(noLi.replace(/\d+巷.*$/,""));                                         // 去巷弄，留到路名
+  return set;
 }
 
 /* ===================== 空域狀態查詢（側邊面板 + 可展開） ===================== */
@@ -550,16 +617,34 @@ async function fetchConditions(lat,lng,el){
     const w=el.querySelector(".cond-weather"); if(w) w.textContent="（暫時無法取得天氣資料）";
   }
 }
+let myLocWatch=null, myLocMarker=null, myLocCircle=null, myLocFirst=false;
+const myLocLayer=L.layerGroup().addTo(map);
+function updateMyLoc(pos){
+  setMsg("");
+  const ll=L.latLng(pos.coords.latitude,pos.coords.longitude), acc=pos.coords.accuracy||0;
+  if(!myLocMarker){
+    myLocMarker=L.marker(ll,{icon:L.divIcon({className:"",iconSize:[22,22],iconAnchor:[11,11],html:'<div class="myloc-dot"></div>'}),
+      zIndexOffset:1000, interactive:false}).addTo(myLocLayer);
+    myLocCircle=L.circle(ll,{radius:acc,color:"#1a73e8",weight:1,fillColor:"#1a73e8",fillOpacity:0.12,interactive:false}).addTo(myLocLayer);
+  }else{ myLocMarker.setLatLng(ll); myLocCircle.setLatLng(ll).setRadius(acc); }
+  if(!myLocFirst){ myLocFirst=true; map.setView(ll, Math.max(map.getZoom(),16)); if(tool==="status") doStatus(ll); }
+  setReadout(`目前位置：${ll.lat.toFixed(6)}, ${ll.lng.toFixed(6)}<br><span style="font-size:11px;color:#777">精確度約 ±${Math.round(acc)} 公尺 · 持續更新中（再按一次按鈕可停止）</span>`);
+}
+function stopMyLoc(){
+  if(myLocWatch!=null){ try{ navigator.geolocation.clearWatch(myLocWatch); }catch(e){} myLocWatch=null; }
+  myLocLayer.clearLayers(); myLocMarker=null; myLocCircle=null; myLocFirst=false;
+  const b=document.getElementById("locateBtn"); if(b) b.textContent="📍 定位我的位置（持續顯示）";
+}
+window.stopMyLoc=stopMyLoc;
 window.locateMe=function(){
+  if(myLocWatch!=null){ stopMyLoc(); setMsg("已停止定位"); return; }   // 再按一次＝停止
   if(!navigator.geolocation){ setMsg("此裝置／瀏覽器不支援定位"); return; }
   setMsg("定位中…（請允許位置權限）");
-  navigator.geolocation.getCurrentPosition(function(pos){
-    setMsg("");
-    const ll=L.latLng(pos.coords.latitude, pos.coords.longitude);
-    map.setView(ll, Math.max(map.getZoom(),15));
-    if(tool==="status") doStatus(ll); else addMeasurePoint(ll);
-  }, function(err){ setMsg("定位失敗："+(err&&err.message||"請確認已允許定位權限")); },
-  {enableHighAccuracy:true, timeout:10000, maximumAge:30000});
+  const b=document.getElementById("locateBtn"); if(b) b.textContent="⏹ 停止定位";
+  myLocFirst=false;
+  myLocWatch=navigator.geolocation.watchPosition(updateMyLoc,
+    function(err){ setMsg("定位失敗："+(err&&err.message||"請確認已允許定位權限")); stopMyLoc(); },
+    {enableHighAccuracy:true, timeout:15000, maximumAge:5000});
 };
 
 /* ===================== 暫存點位（顏色 + 描述） ===================== */
@@ -699,30 +784,51 @@ function redrawMeasure(){
 }
 
 /* ===================== 定位輸入（座標 / 地址） ===================== */
-async function geocode(q){
-  const urls=[
-    `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&accept-language=zh-TW&countrycodes=tw&q=${encodeURIComponent(q)}`,
-    `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&accept-language=zh-TW&q=${encodeURIComponent(q+" 台灣")}`
-  ];
-  for(const url of urls){
-    try{
-      const res=await fetch(url,{headers:{"Accept":"application/json"}});
-      if(!res.ok) continue;
-      const arr=await res.json();
-      if(arr && arr.length) return L.latLng(parseFloat(arr[0].lat), parseFloat(arr[0].lon));
-    }catch(e){ /* 換下一個來源 */ }
-  }
+async function nomiGeo(q){
+  try{
+    const url=`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&accept-language=zh-TW&countrycodes=tw&q=${encodeURIComponent(q)}`;
+    const res=await fetch(url,{headers:{"Accept":"application/json"}});
+    if(res.ok){ const a=await res.json(); if(a&&a.length) return L.latLng(parseFloat(a[0].lat),parseFloat(a[0].lon)); }
+  }catch(e){}
   return null;
+}
+async function photonGeo(q){
+  try{
+    const url=`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=1&lang=default&lat=23.7&lon=120.9`;
+    const res=await fetch(url);
+    if(res.ok){ const j=await res.json(); const f=j&&j.features&&j.features[0];
+      if(f&&f.geometry&&f.geometry.coordinates){ const c=f.geometry.coordinates; return L.latLng(c[1],c[0]); } }
+  }catch(e){}
+  return null;
+}
+async function geocode(q){
+  const vs=addrVariants(q);
+  for(const v of vs.slice(0,3)){ const r=await nomiGeo(v); if(r) return r; }   // Nominatim 各變體
+  const r2=await photonGeo(vs[0]||q); if(r2) return r2;                        // Photon 後備
+  return await nomiGeo((vs[0]||q)+" 台灣");                                     // 最後補國名
 }
 async function goLocate(){
   const v=(document.getElementById("locInput").value||"").trim();
   setMsg("");
-  if(!v){ setMsg("請輸入地址或座標"); return; }
-  let ll=parseCoord(v);
-  if(!ll){ setMsg("查詢地址中…"); ll=await geocode(v); }
-  if(!ll){ setMsg("找不到該地址，請改用「緯度,經度」座標或直接點地圖"); return; }
+  if(!v){ setMsg("請輸入地址、座標或 Plus Code"); return; }
+  let ll=parseCoord(v);                       // 1) 座標（含括號、全形逗號）
+  if(!ll){                                    // 2) Plus Code（含短碼＋地名參考）
+    const pc=findPlusCode(v);
+    if(pc){
+      setMsg("解析 Plus Code 中…");
+      if(OLC.isFull(pc)){ const d=OLC.decode(pc); ll=L.latLng(d.latC,d.lngC); }
+      else{
+        const loc=v.replace(pc,"").trim();
+        const ref=await geocode(loc||"台灣") || map.getCenter();
+        const rc=OLC.recover(pc, ref.lat, ref.lng);
+        ll=L.latLng(rc[0],rc[1]);
+      }
+    }
+  }
+  if(!ll){ setMsg("查詢地址中…"); ll=await geocode(v); }   // 3) 地址
+  if(!ll){ setMsg("找不到，請改用「緯度,經度」座標、Plus Code，或直接點地圖"); return; }
   setMsg("");
-  map.setView(ll, Math.max(map.getZoom(),15));
+  map.setView(ll, Math.max(map.getZoom(),16));
   if(tool==="status") doStatus(ll); else addMeasurePoint(ll);
 }
 window.goLocate=goLocate;
