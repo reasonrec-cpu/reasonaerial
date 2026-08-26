@@ -79,7 +79,7 @@
     #uiToggle{font-size:11px;padding:5px 8px}
   }
   .panel h4{margin:0 0 6px;font-size:13px}
-  .tabs{display:flex;gap:3px;margin-bottom:8px}
+  .tabs{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:8px}
   .tabs button{flex:1;padding:6px 0;border:1px solid #ccd;background:#f4f6fb;border-radius:7px;line-height:1.2;
     cursor:pointer;font-size:12px}
   .batch-tbl{border-collapse:collapse;width:100%;font-size:11.5px}
@@ -137,6 +137,11 @@
   .myloc-dot::after{content:"";position:absolute;left:50%;top:50%;width:16px;height:16px;border-radius:50%;
     transform:translate(-50%,-50%);background:rgba(26,115,232,.35);animation:mylocPulse 1.8s ease-out infinite;pointer-events:none}
   @keyframes mylocPulse{0%{width:16px;height:16px;opacity:.7}100%{width:48px;height:48px;opacity:0}}
+  .parcel-dot{width:18px;height:18px;border-radius:50% 50% 50% 0;transform:rotate(45deg);background:#C8973C;
+    border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.35),0 1px 4px rgba(0,0,0,.4)}
+  .parcel-dot.pending{background:#ff7043;animation:mylocPulse 1.4s ease-out infinite}
+  .parcel-lbl{background:#C8973C;color:#1a1a1a;font-weight:700;font-size:11px;padding:1px 6px;border-radius:8px;
+    border:1px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.35);white-space:nowrap}
   .brandbar{display:flex;align-items:center;gap:6px;margin:-2px 0 8px}
   .brandbar .brandname{font-weight:800;font-size:13px;color:var(--brand,#0e7490);white-space:nowrap}
   .brandbar img{height:20px;width:auto}
@@ -163,6 +168,7 @@
     <button id="t-area" onclick="setTool('area')">測面積</button>
     <button id="t-import" onclick="setTool('import')">匯入<br>範圍</button>
     <button id="t-apply" onclick="setTool('apply')">繪製<br>空域</button>
+    <button id="t-parcel" onclick="setTool('parcel')">地號</button>
   </div>
   <div id="panel-common">
     <div class="inrow">
@@ -209,6 +215,15 @@
     <label style="display:flex;align-items:center;gap:6px;font-size:12px;margin:4px 0;cursor:pointer"><input type="checkbox" onchange="toggleCountyLayer(this)"> 顯示縣市界（協助沿界拆分）</label>
     <div id="apply-list" style="max-height:24vh;overflow:auto;margin-top:4px"></div>
   </div>
+  <div id="panel-parcel" style="display:none">
+    <div class="hint" style="margin:0 0 6px">先打開右側「疊加地籍圖」看清地號；在地圖點該筆土地會標一個醒目點，再輸入地號按「加入清單」。也可直接打字加入。</div>
+    <div class="inrow"><input id="parcelNo" placeholder="地號（如 榮復段123 或 123-1）" style="flex:1"></div>
+    <div class="inrow"><input id="parcelNote" placeholder="備註（可留空）" style="flex:1"></div>
+    <div class="btnrow"><button class="btn primary" onclick="addParcel()">加入清單</button><button class="btn" onclick="cancelParcelPending()">取消定位</button></div>
+    <div id="parcel-list" style="max-height:24vh;overflow:auto;margin-top:4px"></div>
+    <div class="btnrow"><button class="btn" onclick="copyParcels()">複製清單</button><button class="btn" onclick="downloadParcelsCsv()">下載CSV</button></div>
+    <div class="btnrow"><button class="btn cta" style="width:100%;margin-left:0" onclick="contactCTA()">📩 把地號清單寄給瑞森（聯絡我們）</button></div>
+  </div>
   <div class="readout" id="readout">點擊地圖或輸入地址／座標開始。</div>
   <div class="msg" id="msg"></div>
   <div class="hint" id="hint"></div>
@@ -219,6 +234,8 @@
     <button id="b-osm" class="active" onclick="setBase('osm')">街道圖</button>
     <button id="b-sat" onclick="setBase('sat')">衛星影像</button>
   </div>
+  <label style="display:flex;align-items:center;gap:6px;font-size:12px;margin:6px 2px 0;cursor:pointer"><input type="checkbox" id="cadToggle" onchange="toggleCadastral(this)"> 疊加地籍圖（國土測繪中心）</label>
+  <div id="cadNote" style="display:none;font-size:10.5px;color:#999;margin:2px 2px 0;line-height:1.5">放大到街廓才看得清地號；地籍圖僅供參考對位，正式界址以地政事務所謄本／鑑界為準。</div>
   <div class="lg-toggle" onclick="toggleLegend()">圖層圖例 <span id="lg-caret">▾</span></div>
   <div id="legend-wrap">
     <div id="legend-body">載入中…</div>
@@ -251,6 +268,13 @@ const baseOSM = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
 const baseSat = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
   {maxZoom:19, attribution:'Tiles &copy; Esri, Maxar, Earthstar Geographics'});
 let curBase="osm";
+// 地籍圖疊加（內政部國土測繪中心 WMTS，免申請）
+const cadastralLayer=L.tileLayer("https://wmts.nlsc.gov.tw/wmts/LANDSECT/default/GoogleMapsCompatible/{z}/{y}/{x}",
+  {maxZoom:20, opacity:0.9, attribution:'地籍圖 © 內政部國土測繪中心'});
+window.toggleCadastral=function(cb){
+  if(cb.checked) cadastralLayer.addTo(map); else map.removeLayer(cadastralLayer);
+  const n=document.getElementById("cadNote"); if(n) n.style.display=cb.checked?"block":"none";
+};
 window.setBase=function(b){
   if(b===curBase) return;
   if(b==="sat"){ map.removeLayer(baseOSM); baseSat.addTo(map); } else { map.removeLayer(baseSat); baseOSM.addTo(map); }
@@ -281,8 +305,11 @@ window.contactCTA=function(){
             `邊界點位（緯度, 經度）：\n${pts}\n`+
             `空域狀態：${z.length? z.map(x=>nameOf(x)+"("+catLabelOf(x)+")").join("、") : "未壓到已收錄禁/限航區"}\n\n`; });
     if(importedAreas.length || savedMarkers.length) body+="地圖連結："+shareState()+"\n";
-  } else {
-    body+="（提示：可先用「測面積」圈出範圍、到「匯入範圍」貼上座標，或用「繪製空域」畫出範圍，再按此鈕就會自動帶入座標與空域狀態）\n";
+  } else if(!(typeof parcels!=="undefined" && parcels.length)){
+    body+="（提示：可先用「測面積」圈出範圍、到「匯入範圍」貼上座標、用「繪製空域」畫出範圍，或到「地號」標記地號，再按此鈕就會自動帶入資料）\n";
+  }
+  if(typeof parcels!=="undefined" && parcels.length){
+    body+="【已選地號】\n"+parcels.map((r,i)=>`  ${i+1}. ${r.no}${r.note?("（"+r.note+"）"):""}${(r.lat!=null)?("　"+r.lat.toFixed(6)+", "+r.lng.toFixed(6)):""}`).join("\n")+"\n\n";
   }
   window.__ctaBody=body;
   const url=`mailto:${BRAND.email}?subject=${encodeURIComponent("空域範圍諮詢 - 瑞森航拍地圖")}&body=${encodeURIComponent(body)}`;
@@ -647,6 +674,69 @@ window.locateMe=function(){
     {enableHighAccuracy:true, timeout:15000, maximumAge:5000});
 };
 
+/* ===================== 地號（手動清單：標記→輸入→多選→撤銷→導出→寄信） ===================== */
+const parcelLayer=L.layerGroup().addTo(map);
+const parcels=[]; let parcelSeq=1;
+let parcelPending=null, parcelPendingMarker=null;
+function parcelPin(pending){ return L.divIcon({className:"",iconSize:[20,20],iconAnchor:[10,20],
+  html:`<div class="parcel-dot${pending?" pending":""}"></div>`}); }
+function addParcelPoint(latlng){
+  parcelPending={lat:latlng.lat, lng:latlng.lng};
+  if(parcelPendingMarker) parcelLayer.removeLayer(parcelPendingMarker);
+  parcelPendingMarker=L.marker(latlng,{icon:parcelPin(true),interactive:false}).addTo(parcelLayer);
+  setReadout(`已標記位置 ${latlng.lat.toFixed(6)}, ${latlng.lng.toFixed(6)}<br><span style="font-size:11px;color:#777">請在左側輸入地號後按「加入清單」（誤觸可按「取消定位」）</span>`);
+  const inp=document.getElementById("parcelNo"); if(inp) inp.focus();
+}
+window.cancelParcelPending=function(){
+  if(parcelPendingMarker){ parcelLayer.removeLayer(parcelPendingMarker); parcelPendingMarker=null; }
+  parcelPending=null; setMsg("已取消定位");
+};
+window.addParcel=function(){
+  const no=(document.getElementById("parcelNo").value||"").trim();
+  const note=(document.getElementById("parcelNote").value||"").trim();
+  if(!no){ setMsg("請先輸入地號"); return; }
+  const rec={id:parcelSeq++, no, note, lat:parcelPending?parcelPending.lat:null, lng:parcelPending?parcelPending.lng:null, marker:null};
+  if(parcelPending){
+    if(parcelPendingMarker){ parcelLayer.removeLayer(parcelPendingMarker); parcelPendingMarker=null; }
+    const m=L.marker([rec.lat,rec.lng],{icon:parcelPin(false)}).addTo(parcelLayer);
+    m.bindTooltip(rec.no,{permanent:true,direction:"top",offset:[0,-18],className:"parcel-lbl"});
+    m.bindPopup(`<b>${esc(rec.no)}</b>${rec.note?("<br>"+esc(rec.note)):""}<br><span style="font-size:11px;color:#666">${rec.lat.toFixed(6)}, ${rec.lng.toFixed(6)}</span><div class="pop-actions"><button class="btn" onclick="openGmap(${rec.lat},${rec.lng})">Google 地圖</button><button class="btn" onclick="delParcel(${rec.id})">刪除</button></div>`);
+    rec.marker=m;
+  }
+  parcels.push(rec); parcelPending=null;
+  document.getElementById("parcelNo").value=""; document.getElementById("parcelNote").value="";
+  renderParcels(); setMsg(""); setReadout(`已選 ${parcels.length} 筆地號。`);
+};
+function renderParcels(){
+  const el=document.getElementById("parcel-list"); if(!el) return;
+  if(!parcels.length){ el.innerHTML=`<div class="empty" style="color:#999;padding:4px 0">尚無地號。點地圖標記或直接輸入後「加入清單」。</div>`; return; }
+  el.innerHTML="";
+  parcels.forEach((r,i)=>{
+    const d=document.createElement("div");
+    d.style.cssText="display:flex;align-items:center;gap:6px;padding:4px 2px;border-bottom:1px solid #f0f0f0;font-size:12px";
+    d.innerHTML=`<span style="width:16px;height:16px;border-radius:3px;background:#C8973C;color:#1a1a1a;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:10px;flex:0 0 auto">${i+1}</span>`+
+      `<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r.no)}${r.note?(' '+esc(r.note)):''}">${esc(r.no)}${r.note?`<span style="color:#999"> · ${esc(r.note)}</span>`:''}</span>`+
+      (r.lat!=null?`<button class="mini" title="定位" onclick="zoomParcel(${r.id})">🔍</button>`:'')+
+      `<button class="mini" title="刪除" onclick="delParcel(${r.id})">🗑️</button>`;
+    el.appendChild(d);
+  });
+}
+window.zoomParcel=function(id){ const r=parcels.find(x=>x.id===id); if(r&&r.lat!=null){ map.setView([r.lat,r.lng],Math.max(map.getZoom(),17)); if(r.marker)r.marker.openPopup(); } };
+window.delParcel=function(id){ const i=parcels.findIndex(x=>x.id===id); if(i<0)return;
+  if(parcels[i].marker) parcelLayer.removeLayer(parcels[i].marker); parcels.splice(i,1); renderParcels();
+  setReadout(`已選 ${parcels.length} 筆地號。`); };
+window.clearParcels=function(){ parcels.slice().forEach(r=>{ if(r.marker)parcelLayer.removeLayer(r.marker); }); parcels.length=0;
+  cancelParcelPending(); renderParcels(); setMsg("已清除所有地號"); };
+function parcelsText(){ return parcels.map((r,i)=>`${i+1}. ${r.no}${r.note?("（"+r.note+"）"):""}${r.lat!=null?("　"+r.lat.toFixed(6)+", "+r.lng.toFixed(6)):""}`).join("\n"); }
+window.copyParcels=function(){ if(!parcels.length){ setMsg("尚無地號可複製"); return; }
+  const t=parcelsText();
+  if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(()=>setMsg("已複製地號清單")).catch(()=>setMsg("複製失敗，請手動選取"));
+  else setMsg("此環境不支援自動複製"); };
+window.downloadParcelsCsv=function(){ if(!parcels.length){ setMsg("尚無地號可下載"); return; }
+  const rows=[["序","地號","備註","緯度","經度"]].concat(parcels.map((r,i)=>[i+1,r.no,r.note||"",r.lat!=null?r.lat.toFixed(6):"",r.lng!=null?r.lng.toFixed(6):""]));
+  const csv="\ufeff"+rows.map(r=>r.map(x=>`"${String(x==null?"":x).replace(/"/g,'""')}"`).join(",")).join("\r\n");
+  downloadText(csv,"地號清單.csv","text/csv"); setMsg("已下載 CSV"); };
+
 /* ===================== 暫存點位（顏色 + 描述） ===================== */
 // 標記/導入用色：刻意避開禁航紅、限航黃、臨時橘、國家公園綠、商港藍、行政區紫
 const SAVE_COLORS=["#d81b60","#3949ab","#00897b","#00acc1","#6d4c41","#546e7a","#1a1a1a"];
@@ -731,7 +821,7 @@ let mpts=[];  // L.latLng[]
 
 function setTool(t){
   tool=t;
-  ["status","distance","area","import","apply"].forEach(k=>{
+  ["status","distance","area","import","apply","parcel"].forEach(k=>{
     const b=document.getElementById("t-"+k); if(b) b.classList.toggle("active", k===t);
   });
   setMsg("");
@@ -739,11 +829,13 @@ function setTool(t){
   document.getElementById("panel-common").style.display = common?"block":"none";
   document.getElementById("panel-import").style.display = (t==="import")?"block":"none";
   document.getElementById("panel-apply").style.display = (t==="apply")?"block":"none";
+  document.getElementById("panel-parcel").style.display = (t==="parcel")?"block":"none";
   if(t==="status"){ setHint("點地圖查空域；或輸入地址／座標後按定位。"); clearMeasure(); setReadout("點擊地圖或輸入地址／座標開始。"); }
   else if(t==="distance"){ setHint("依序點地圖或輸入座標加點，計算路徑總長。點節點可刪除、可拖曳。"); closeResult(); redrawMeasure(); }
   else if(t==="area"){ setHint("依序加點圍出範圍，計算面積（至少 3 點）。點節點可刪除、可拖曳。"); closeResult(); redrawMeasure(); }
   else if(t==="import"){ setHint("貼上或匯入範圍(KML／GeoJSON／座標)，繪成範圍後可查壓到哪些禁／限航區，並按「產出報表」列出範圍內各空域單位的聯絡方式。"); clearMeasure(); closeResult(); setReadout(`已匯入 ${importedAreas.length} 個範圍。`); }
   else if(t==="apply"){ setHint("繪製申請多邊形（最多6點），即時顯示空域數，可暫存並匯出給民航局。"); clearMeasure(); closeResult(); setReadout("按「繪製多邊形」開始，在地圖上點出頂點。"); }
+  else if(t==="parcel"){ setHint("在地圖點土地位置標記，輸入地號加入清單；可多筆、單筆刪除、導出並寄給我們。"); clearMeasure(); closeResult(); setReadout(parcels.length?`已選 ${parcels.length} 筆地號。`:"點地圖標記位置，或直接在左側輸入地號加入。"); }
 }
 function addMeasurePoint(latlng){
   mpts.push(latlng); redrawMeasure();
@@ -842,6 +934,7 @@ map.on("click", function(e){
   if(tool==="status") doStatus(e.latlng);
   else if(tool==="distance" || tool==="area") addMeasurePoint(e.latlng);
   else if(tool==="apply" && applyDraw) addApplyVertex(e.latlng);
+  else if(tool==="parcel") addParcelPoint(e.latlng);
 });
 
 /* ===================== 小工具 ===================== */
