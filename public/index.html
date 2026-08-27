@@ -15,6 +15,15 @@
 <meta property="og:site_name" content="瑞森航拍">
 <meta property="og:locale" content="zh_TW">
 <meta name="twitter:card" content="summary_large_image">
+<meta property="og:image" content="https://map.reasonaerial.com/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="675">
+<meta property="og:image:alt" content="台灣無人機空域查詢地圖 · 瑞森航拍">
+<meta name="twitter:image" content="https://map.reasonaerial.com/og-image.jpg">
+<meta name="theme-color" content="#C8973C">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebApplication","name":"台灣無人機空域查詢地圖","alternateName":"無人機禁航區・限航區查詢","url":"https://map.reasonaerial.com/","applicationCategory":"MapApplication","operatingSystem":"Web","browserRequirements":"Requires JavaScript","inLanguage":"zh-Hant","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"},"description":"免費台灣無人機空域查詢地圖：即時查禁航區、限航區、國家公園與商港，支援測距測面積、匯入範圍自動算空域數、匯出 KML／GeoJSON。","provider":{"@type":"Organization","name":"瑞森航拍","url":"https://www.reasonaerial.com/"}}
+</script>
 <!-- Google Analytics 4 · 瑞森空域地圖（評估 ID：G-VMGE4EXZNG） -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-VMGE4EXZNG"></script>
 <script>
@@ -32,6 +41,19 @@
   /* 工具面板（左上） */
   .panel{position:absolute;top:52px;left:10px;z-index:600;width:246px;padding:10px;font-size:13px;
     max-height:calc(100vh - 66px);overflow:auto}
+  #helpBtn{position:absolute;top:10px;left:112px;z-index:700;width:30px;height:30px;border-radius:50%;border:none;
+    background:rgba(255,255,255,.96);box-shadow:0 1px 6px rgba(0,0,0,.25);cursor:pointer;font-size:15px;font-weight:800;color:#666}
+  #guideOverlay{position:absolute;inset:0;z-index:2000;background:rgba(20,24,30,.55);display:none;align-items:center;justify-content:center;padding:16px}
+  #guideOverlay.show{display:flex}
+  #guideCard{background:#fff;max-width:440px;width:100%;border-radius:14px;box-shadow:0 10px 40px rgba(0,0,0,.35);padding:20px 20px 16px;max-height:calc(100vh - 40px);overflow:auto;color:#222;line-height:1.7}
+  #guideCard h3{margin:0 0 3px;font-size:19px}
+  #guideCard .g-sub{color:#666;font-size:13px;margin:0 0 12px}
+  #guideCard .g-item{display:flex;gap:11px;padding:9px 0;border-top:1px solid #f1f1f1;font-size:14px}
+  #guideCard .g-item .ic{font-size:20px;flex:0 0 auto}
+  #guideCard .g-item b{font-weight:800}
+  #guideCard .g-note{color:#8a8f96;font-size:12px;margin:12px 0 14px;line-height:1.6}
+  #guideCard .g-btn{display:block;width:100%;background:var(--brand,#C8973C);color:#1a1a1a;font-weight:800;border:none;border-radius:10px;padding:12px;font-size:15px;cursor:pointer}
+  @media(max-width:640px){ #helpBtn{left:96px;width:28px;height:28px;font-size:14px} #guideCard{font-size:13.5px} }
   #uiToggle{position:absolute;top:10px;left:10px;z-index:700;padding:6px 10px;border:none;border-radius:8px;
     cursor:pointer;font-size:12px;font-weight:700;background:rgba(255,255,255,.96);box-shadow:0 1px 6px rgba(0,0,0,.25)}
   body.ui-hidden .panel, body.ui-hidden .legend, body.ui-hidden .saved{display:none}
@@ -156,6 +178,7 @@
 <body>
 <div id="map"></div>
 <button id="uiToggle" onclick="toggleUI()">⛶ 隱藏面板</button>
+<button id="helpBtn" title="使用說明／導覽" onclick="showGuide()">?</button>
 
 <div class="panel box">
   <div class="brandbar" id="brandbar">
@@ -233,6 +256,7 @@
   <div class="baseswitch">
     <button id="b-osm" class="active" onclick="setBase('osm')">街道圖</button>
     <button id="b-sat" onclick="setBase('sat')">衛星影像</button>
+    <button id="b-topo" onclick="setBase('topo')">地形</button>
   </div>
   <label style="display:flex;align-items:center;gap:6px;font-size:12px;margin:6px 2px 0;cursor:pointer"><input type="checkbox" id="cadToggle" onchange="toggleCadastral(this)"> 疊加地籍圖（國土測繪中心）</label>
   <div id="cadNote" style="display:none;font-size:10.5px;color:#999;margin:2px 2px 0;line-height:1.5">放大到街廓才看得清地號；地籍圖僅供參考對位，正式界址以地政事務所謄本／鑑界為準。</div>
@@ -250,6 +274,17 @@
 
 <div id="resultPanel" class="box"></div>
 
+<div id="guideOverlay" onclick="if(event.target===this)closeGuide()">
+  <div id="guideCard">
+    <h3>歡迎使用 · 台灣無人機空域查詢地圖</h3>
+    <div class="g-sub">免費工具，圖資每日與民航局同步。三步驟快速上手：</div>
+    <div class="g-item"><span class="ic">🔍</span><span><b>查空域</b>：在地圖點任一位置，或搜尋地址／座標／Plus Code，立刻看出有沒有壓到禁航區、限航區，並顯示天氣與地面海拔。</span></div>
+    <div class="g-item"><span class="ic">📐</span><span><b>測距・測面積・畫範圍</b>：切上方分頁，點幾下就能量距離、面積，或畫出申請範圍自動算空域數、匯出檔案。</span></div>
+    <div class="g-item"><span class="ic">🗂️</span><span><b>地籍圖・地號・聯絡</b>：可疊加地籍圖、標記地號成清單，並一鍵把範圍或地號寄給瑞森。</span></div>
+    <div class="g-note">小提醒：圖資僅供參考，實際飛行仍以主管機關最新公告為準。</div>
+    <button class="g-btn" onclick="closeGuide()">開始使用</button>
+  </div>
+</div>
 <div class="banner">資料來源：交通部民用航空局（僅供參考，實際飛行以主管機關最新公告為準）· 每日自動同步 · 測量值為概估 · 由 <a href="https://www.reasonaerial.com/" target="_blank" rel="noopener" style="color:#C8973C;font-weight:700;text-decoration:none">瑞森航拍</a> 製作維護</div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
@@ -267,6 +302,9 @@ const baseOSM = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
   {maxZoom:19, attribution:'&copy; OpenStreetMap contributors'}).addTo(map);
 const baseSat = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
   {maxZoom:19, attribution:'Tiles &copy; Esri, Maxar, Earthstar Geographics'});
+const baseTopo = L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
+  {maxZoom:17, subdomains:'abc', attribution:'© OpenTopoMap (CC-BY-SA)、© OpenStreetMap contributors'});
+const BASES={osm:baseOSM, sat:baseSat, topo:baseTopo};
 let curBase="osm";
 // 地籍圖疊加（內政部國土測繪中心 WMTS，免申請）
 const cadastralLayer=L.tileLayer("https://wmts.nlsc.gov.tw/wmts/LANDSECT/default/GoogleMapsCompatible/{z}/{y}/{x}",
@@ -276,11 +314,11 @@ window.toggleCadastral=function(cb){
   const n=document.getElementById("cadNote"); if(n) n.style.display=cb.checked?"block":"none";
 };
 window.setBase=function(b){
-  if(b===curBase) return;
-  if(b==="sat"){ map.removeLayer(baseOSM); baseSat.addTo(map); } else { map.removeLayer(baseSat); baseOSM.addTo(map); }
+  if(b===curBase || !BASES[b]) return;
+  Object.keys(BASES).forEach(k=>{ if(map.hasLayer(BASES[k])) map.removeLayer(BASES[k]); });
+  BASES[b].addTo(map); if(BASES[b].bringToBack) BASES[b].bringToBack();
   curBase=b;
-  document.getElementById("b-osm").classList.toggle("active", b==="osm");
-  document.getElementById("b-sat").classList.toggle("active", b==="sat");
+  ["osm","sat","topo"].forEach(k=>{ const el=document.getElementById("b-"+k); if(el) el.classList.toggle("active", k===b); });
 };
 L.control.scale({position:"bottomright", metric:true, imperial:false, maxWidth:160}).addTo(map);
 // 套用品牌
@@ -622,15 +660,24 @@ function goldenText(sr,ss){
   if(!sr||!ss) return "";
   return `　🌅 黃金時刻 ${sr}–${add(sr,60)}、${add(ss,-60)}–${ss}`;
 }
+const condCache={};   // 天氣快取：同點 10 分鐘內不重抓
+async function getWeather(lat,lng){
+  const key=lat.toFixed(3)+","+lng.toFixed(3);
+  const c=condCache[key];
+  if(c && (Date.now()-c.t)<600000) return c.d;
+  const u=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}`+
+          `&current=precipitation,cloud_cover,wind_speed_10m,wind_gusts_10m,visibility`+
+          `&daily=sunrise,sunset&timezone=Asia%2FTaipei&wind_speed_unit=ms&forecast_days=1`;
+  const d=await (await fetch(u)).json();
+  condCache[key]={t:Date.now(), d};
+  return d;
+}
 async function fetchConditions(lat,lng,el){
   const near=nearestProhibitedHtml(L.latLng(lat,lng));
   el.innerHTML = (near?`<div class="cond-line">${near}</div>`:"") +
                  `<div class="cond-weather" style="color:#999">飛行天氣查詢中…</div>`;
   try{
-    const u=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}`+
-            `&current=precipitation,cloud_cover,wind_speed_10m,wind_gusts_10m,visibility`+
-            `&daily=sunrise,sunset&timezone=Asia%2FTaipei&wind_speed_unit=ms&forecast_days=1`;
-    const d=await (await fetch(u)).json();
+    const d=await getWeather(lat,lng);
     const c=d.current||{}, day=d.daily||{};
     const wind=c.wind_speed_10m, gust=c.wind_gusts_10m, rain=c.precipitation, cloud=c.cloud_cover, vis=c.visibility;
     const sr=((day.sunrise||[])[0]||"").slice(11,16), ss=((day.sunset||[])[0]||"").slice(11,16);
@@ -638,6 +685,7 @@ async function fetchConditions(lat,lng,el){
     if(w) w.outerHTML =
       `<div class="cond-line" style="color:#555">目前天氣（預報值，僅供參考）</div>`+
       `<div class="cond-line">風 ${fmtNum(wind)} m/s（陣風 ${fmtNum(gust)}）· 雨 ${fmtNum(rain)}mm · 雲 ${fmtNum(cloud)}% · 能見度 ${vis!=null?(vis/1000).toFixed(0):'—'}km</div>`+
+      (d.elevation!=null?`<div class="cond-line">⛰️ 地面海拔約 ${Math.round(d.elevation)} 公尺（飛行高度以此地面為基準推算）</div>`:"")+
       (sr?`<div class="cond-line">☀️ 日出 ${sr} · 日落 ${ss}${goldenText(sr,ss)}</div>`:"")+
       `<div class="cond-note">以上為天氣預報與概估距離，是否適航請自行依現場狀況與相關法規判斷。</div>`;
   }catch(e){
@@ -941,6 +989,11 @@ map.on("click", function(e){
 function setReadout(h){ document.getElementById("readout").innerHTML=h; }
 function setMsg(h){ document.getElementById("msg").innerHTML=h; }
 function setHint(h){ document.getElementById("hint").innerHTML=h; }
+window.showGuide=function(){ document.getElementById("guideOverlay").classList.add("show"); };
+window.closeGuide=function(){ document.getElementById("guideOverlay").classList.remove("show");
+  try{ localStorage.setItem("droneGuideSeen","1"); }catch(e){} };
+(function(){ let seen=false; try{ seen=localStorage.getItem("droneGuideSeen")==="1"; }catch(e){}
+  if(!seen){ setTimeout(()=>{ const g=document.getElementById("guideOverlay"); if(g) g.classList.add("show"); }, 600); } })();
 window.toggleUI=function(){
   const hidden=document.body.classList.toggle("ui-hidden");
   document.getElementById("uiToggle").textContent = hidden ? "⛶ 顯示面板" : "⛶ 隱藏面板";
@@ -992,6 +1045,23 @@ function parseImportText(txt){
     if(Math.abs(f.lat-l.lat)<1e-9 && Math.abs(f.lng-l.lng)<1e-9) out.pop(); }
   return out;
 }
+function segInt(a,b,c,d){ // 線段 ab 與 cd 是否相交
+  function ccw(p,q,r){ return (r[1]-p[1])*(q[0]-p[0])-(q[1]-p[1])*(r[0]-p[0]); }
+  const d1=ccw(c,d,a), d2=ccw(c,d,b), d3=ccw(a,b,c), d4=ccw(a,b,d);
+  return ((d1>0&&d2<0)||(d1<0&&d2>0)) && ((d3>0&&d4<0)||(d3<0&&d4>0));
+}
+function geomRings(geom){
+  if(!geom) return [];
+  if(geom.type==="Polygon") return geom.coordinates;
+  if(geom.type==="MultiPolygon"){ const o=[]; geom.coordinates.forEach(poly=>poly.forEach(r=>o.push(r))); return o; }
+  return [];
+}
+function ringsEdgeCross(ring, geom){
+  const zr=geomRings(geom);
+  for(let i=0;i<ring.length;i++){ const a=ring[i], b=ring[(i+1)%ring.length];
+    for(const z of zr){ for(let j=0;j+1<z.length;j++){ if(segInt(a,b,z[j],z[j+1])) return true; } } }
+  return false;
+}
 function areaZones(latlngs){
   const ring=ringLngLat(latlngs), b=L.latLngBounds(latlngs);
   const cLat=latlngs.reduce((s,p)=>s+p.lat,0)/latlngs.length;
@@ -1000,9 +1070,15 @@ function areaZones(latlngs){
   for(const r of records){
     if(!r.bounds || !r.bounds.intersects(b)) continue;
     let hit=false;
+    // 1) 範圍任一頂點落在空域內
     for(const p of latlngs){ if(pipGeom([p.lng,p.lat],r.feature.geometry)){hit=true;break;} }
+    // 2) 範圍中心落在空域內
     if(!hit && pipGeom([cLng,cLat],r.feature.geometry)) hit=true;
-    if(!hit){ const zc=r.bounds.getCenter(); if(pipRing([zc.lng,zc.lat],ring)) hit=true; }
+    // 3) 空域任一頂點落在範圍內（範圍包住空域一部分／全部）
+    if(!hit){ const zr=geomRings(r.feature.geometry);
+      for(const z of zr){ let f=false; for(const pt of z){ if(pipRing(pt, ring)){hit=true;f=true;break;} } if(f)break; } }
+    // 4) 邊界交叉（切到一角、無頂點落入的情形）
+    if(!hit && ringsEdgeCross(ring, r.feature.geometry)) hit=true;
     if(hit) hits.push(r);
   }
   hits.sort((a,b2)=>boundsArea(a.bounds)-boundsArea(b2.bounds));
