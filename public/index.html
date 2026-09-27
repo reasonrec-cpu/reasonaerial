@@ -96,7 +96,8 @@
     .legend .sw{width:12px;height:12px}
     .baseswitch button{font-size:11px;padding:3px 0}
     .saved{width:min(56vw,210px);max-height:22vh;bottom:24px;padding:7px 9px}
-    .brandbar .btn.cta{font-size:10px;padding:4px 6px}
+    .brandbar{flex-wrap:wrap}
+    .brandbar .btn.cta,.brandbar .btn.site{font-size:10px;padding:4px 6px}
     .leaflet-popup-content{max-width:210px}
     #uiToggle{font-size:11px;padding:5px 8px}
   }
@@ -167,6 +168,7 @@
   .brandbar{display:flex;align-items:center;gap:6px;margin:-2px 0 8px}
   .brandbar .brandname{font-weight:800;font-size:13px;color:var(--brand,#0e7490);white-space:nowrap}
   .brandbar img{height:20px;width:auto}
+  .brandbar .btn.site{white-space:nowrap;text-decoration:none;color:#555;font-size:11px;padding:5px 8px}
   .btn.cta{margin-left:auto;background:var(--brand,#C8973C);color:#1a1a1a;border-color:var(--brand,#C8973C);
     font-weight:700;font-size:11px;padding:5px 8px;white-space:nowrap}
   .baseswitch{display:flex;gap:4px;margin-bottom:8px}
@@ -183,6 +185,7 @@
 <div class="panel box">
   <div class="brandbar" id="brandbar">
     <span class="brandname" id="brandname"></span>
+    <a class="btn site" href="https://www.reasonaerial.com/?utm_source=map_tool&amp;utm_medium=referral&amp;utm_campaign=airspace_map" target="_blank" rel="noopener">🌐 官網介紹</a>
     <button class="btn cta" onclick="contactCTA()">📸 想拍這裡？聯絡我們</button>
   </div>
   <div class="tabs">
@@ -205,16 +208,16 @@
     </div>
   </div>
   <div id="panel-import" style="display:none">
-    <textarea id="impText" rows="4" placeholder="貼上座標，每點 緯,經 以空格或換行分隔。&#10;支援度分秒併寫(如 223602.60,1202042.33)或十進位(22.60,120.34)。" style="width:100%;box-sizing:border-box;padding:6px 7px;border:1px solid #ccd;border-radius:7px;font-size:12px;font-family:inherit"></textarea>
+    <textarea id="impText" rows="4" placeholder="貼上座標，每點 緯,經 以空格或換行分隔。&#10;支援度分秒併寫(如 223602.60,1202042.33)或十進位(22.60,120.34)，&#10;也可直接貼上許可書文字（北緯23度05分46.97秒 東經120度05分09.15秒）。" style="width:100%;box-sizing:border-box;padding:6px 7px;border:1px solid #ccd;border-radius:7px;font-size:12px;font-family:inherit"></textarea>
     <div class="inrow" style="margin-top:6px">
       <input id="impName" placeholder="範圍名稱(如 CKWT)" style="flex:1">
     </div>
     <div class="swatches" id="impSw"></div>
     <div class="btnrow">
       <button class="btn primary" onclick="importFromText()">繪製到地圖</button>
-      <label class="btn" style="cursor:pointer">匯入檔案<input id="impFile" type="file" accept=".zip,.geojson,.json,.kml" style="display:none" onchange="importFromFile(event)"></label>
+      <label class="btn" style="cursor:pointer">匯入檔案<input id="impFile" type="file" accept=".zip,.geojson,.json,.kml,.pdf,.txt" style="display:none" onchange="importFromFile(event)"></label>
     </div>
-    <div class="hint" style="margin:0 0 6px">檔案支援 Shapefile(壓成含 .shp/.shx/.dbf/.prj 的 zip)、GeoJSON(.json)、KML(.kml)，上限 10MB。</div>
+    <div class="hint" style="margin:0 0 6px">檔案支援 Shapefile(壓成含 .shp/.shx/.dbf/.prj 的 zip)、GeoJSON(.json)、KML(.kml)，以及民航局活動申請許可書 PDF（自動讀取各空域座標，名稱為「作業名稱－空域號」），上限 10MB。</div>
     <div class="btnrow"><button class="btn primary" style="width:100%" onclick="openImportReport()">📋 產出報表（範圍內空域單位＋聯絡方式）</button></div>
     <div class="btnrow"><button class="btn cta" style="width:100%;margin-left:0" onclick="contactCTA()">📩 把範圍寄給瑞森（聯絡我們）</button></div>
     <div class="btnrow"><button class="btn" onclick="copyShare()">🔗 複製分享連結</button></div>
@@ -233,7 +236,7 @@
     <div id="apply-status" style="background:#f6f8fc;border:1px solid #e6ebf5;border-radius:7px;padding:7px 8px;font-size:12px;line-height:1.6;margin:4px 0">點數 0/6</div>
     <div class="inrow"><input id="apply-name" placeholder="區域名稱(如 申請區A)" style="flex:1"></div>
     <div class="inrow"><input id="apply-height" type="number" placeholder="飛行高度 公尺(可留空)" style="flex:1"></div>
-    <div class="btnrow"><button class="btn primary" onclick="saveApplyArea()">💾 暫存為圖層</button></div>
+    <div class="btnrow"><button class="btn primary" id="apply-save-btn" onclick="saveApplyArea()">💾 暫存為圖層</button><button class="btn" id="apply-cancel-edit" style="display:none" onclick="cancelApplyEdit()">取消修改</button></div>
     <div class="btnrow"><button class="btn cta" style="width:100%;margin-left:0" onclick="contactCTA()">📩 把空域範圍寄給瑞森（聯絡我們）</button></div>
     <label style="display:flex;align-items:center;gap:6px;font-size:12px;margin:4px 0;cursor:pointer"><input type="checkbox" onchange="toggleCountyLayer(this)"> 顯示縣市界（協助沿界拆分）</label>
     <div id="apply-list" style="max-height:24vh;overflow:auto;margin-top:4px"></div>
@@ -285,7 +288,7 @@
     <button class="g-btn" onclick="closeGuide()">開始使用</button>
   </div>
 </div>
-<div class="banner">資料來源：交通部民用航空局（僅供參考，實際飛行以主管機關最新公告為準）· 每日自動同步 · 測量值為概估 · 由 <a href="https://www.reasonaerial.com/" target="_blank" rel="noopener" style="color:#C8973C;font-weight:700;text-decoration:none">瑞森航拍</a> 製作維護</div>
+<div class="banner">資料來源：交通部民用航空局（僅供參考，實際飛行以主管機關最新公告為準）· 每日自動同步 · 測量值為概估 · 由 <a href="https://www.reasonaerial.com/?utm_source=map_tool&amp;utm_medium=referral&amp;utm_campaign=airspace_map" target="_blank" rel="noopener" style="color:#C8973C;font-weight:700;text-decoration:none">瑞森航拍</a> 製作維護</div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
@@ -332,8 +335,8 @@ window.contactCTA=function(){
   // 收集所有範圍：匯入範圍 + 繪製空域(暫存圖層) + 繪製中多邊形 + 測面積手繪
   const ranges=[];
   importedAreas.forEach(r=> ranges.push({name:(r.name||"匯入範圍")+"（匯入）", latlngs:r.latlngs}));
-  if(typeof savedAreas!=="undefined") savedAreas.forEach(r=> ranges.push({name:(r.name||"繪製空域")+(r.height?("，高度"+r.height+"m"):"")+"（繪製空域）", latlngs:r.latlngs}));
-  if(typeof applyPts!=="undefined" && applyPts.length>=3) ranges.push({name:"繪製中的空域範圍", latlngs:applyPts.slice()});
+  if(typeof savedAreas!=="undefined") savedAreas.filter(r=>r.id!==editingApplyId).forEach(r=> ranges.push({name:(r.name||"繪製空域")+(r.height?("，高度"+r.height+"m"):"")+"（繪製空域）", latlngs:r.latlngs}));
+  if(typeof applyPts!=="undefined" && applyPts.length>=3) ranges.push({name:editingApplyId!==null?"修改中的空域範圍":"繪製中的空域範圍", latlngs:applyPts.slice()});
   if(typeof mpts!=="undefined" && mpts.length>=3) ranges.push({name:"手繪範圍（測面積）", latlngs:mpts.slice()});
   let body="您好，我想諮詢，以下是我在地圖上標定的範圍：\n\n";
   if(ranges.length){
@@ -527,7 +530,7 @@ function addrVariants(v){
 
 /* ===================== 空域狀態查詢（側邊面板 + 可展開） ===================== */
 let highlighted=null, curMatches=[], curQuery=null, queryMarker=null;
-function esc(s){ return String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+function esc(s){ return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 function clearHighlight(){ if(highlighted){ highlighted.layer.setStyle(highlighted.base); highlighted=null; } }
 function highlight(rec){
   clearHighlight();
@@ -1045,6 +1048,59 @@ function parseImportText(txt){
     if(Math.abs(f.lat-l.lat)<1e-9 && Math.abs(f.lng-l.lng)<1e-9) out.pop(); }
   return out;
 }
+/* ---- 文件座標（民航局活動申請許可書：作業名稱＋「空域 N」各點度分秒） ---- */
+const DOC_DMS_PAIR="(?:北緯|緯度|N)(\\d{1,2})(?:度|°)(\\d{1,2})(?:分|'|′)([\\d.]+)(?:秒|\"|″)[，,]?(?:東經|經度|E)(\\d{1,3})(?:度|°)(\\d{1,2})(?:分|'|′)([\\d.]+)(?:秒|\"|″)";
+function hasDocCoords(txt){ return new RegExp(DOC_DMS_PAIR).test(String(txt).replace(/\s+/g,"")); }
+function parseDocAreas(txt, fallbackName){
+  const t=String(txt).replace(/\s+/g,"");
+  const jm=t.match(/作業名稱[:：]?(.{2,80}?)(?:用途|申請單位|作業日期)/);
+  const job=jm?jm[1]:"";
+  // 同一空域在許可書中會出現兩次（計畫表＋附圖座標），各空域取第一段有 3 點以上者
+  const re=new RegExp("空域(\\d{1,2})|"+DOC_DMS_PAIR,"g");
+  const segs=[]; let cur=null, m;
+  while((m=re.exec(t))){
+    if(m[1]!=null){ cur={no:+m[1],pts:[]}; segs.push(cur); continue; }
+    if(!cur){ cur={no:0,pts:[]}; segs.push(cur); }
+    const lat=+m[2]+m[3]/60+m[4]/3600, lng=+m[5]+m[6]/60+m[7]/3600;
+    const last=cur.pts[cur.pts.length-1];
+    if(!last || Math.abs(last[0]-lat)>1e-9 || Math.abs(last[1]-lng)>1e-9) cur.pts.push([lat,lng]);
+  }
+  const byNo=new Map();
+  segs.forEach(s=>{
+    if(s.pts.length>1){ const f=s.pts[0],l=s.pts[s.pts.length-1]; if(Math.abs(f[0]-l[0])<1e-9 && Math.abs(f[1]-l[1])<1e-9) s.pts.pop(); }
+    if(s.pts.length>=3 && !byNo.has(s.no)) byNo.set(s.no,s);
+  });
+  const base=job||fallbackName||"";
+  const areas=[...byNo.values()].sort((a,b)=>a.no-b.no).map(s=>({no:s.no, pts:s.pts,
+    name: s.no ? (base?base+"－":"")+"空域"+s.no : (base||"文件範圍")}));
+  return {job, areas};
+}
+const PDFJS_BASE="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/";
+let pdfjsLoading=null;
+function loadPdfJs(){
+  if(window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+  if(!pdfjsLoading) pdfjsLoading=new Promise((res,rej)=>{
+    const s=document.createElement("script"); s.src=PDFJS_BASE+"pdf.min.js";
+    s.onload=()=>{ window.pdfjsLib.GlobalWorkerOptions.workerSrc=PDFJS_BASE+"pdf.worker.min.js"; res(window.pdfjsLib); };
+    s.onerror=()=>{ pdfjsLoading=null; rej(new Error("PDF 解析元件載入失敗，請確認網路後再試")); };
+    document.head.appendChild(s);
+  });
+  return pdfjsLoading;
+}
+async function pdfToText(buf){
+  const lib=await loadPdfJs();
+  const pdf=await lib.getDocument({data:buf}).promise;
+  let out="";
+  for(let i=1;i<=pdf.numPages;i++){ const tc=await (await pdf.getPage(i)).getTextContent(); out+=tc.items.map(it=>it.str).join(" ")+"\n"; }
+  return out;
+}
+function addDocAreas(areas, nameFor){
+  const start=Math.max(0,SAVE_COLORS.indexOf(impColorSel));
+  areas.forEach((a,i)=> addImport({id:impSeq++, name:nameFor(a), color:SAVE_COLORS[(start+i)%SAVE_COLORS.length], pts:a.pts},{fit:false}));
+  const all=[]; areas.forEach(a=>a.pts.forEach(p=>all.push(L.latLng(p[0],p[1]))));
+  try{ map.fitBounds(L.latLngBounds(all).pad(0.2)); }catch(e){}
+  setReadout(`已從文件匯入 ${areas.length} 個範圍：<br>`+areas.map(a=>"・"+esc(nameFor(a))).join("<br>"));
+}
 function segInt(a,b,c,d){ // 線段 ab 與 cd 是否相交
   function ccw(p,q,r){ return (r[1]-p[1])*(q[0]-p[0])-(q[1]-p[1])*(r[0]-p[0]); }
   const d1=ccw(c,d,a), d2=ccw(c,d,b), d3=ccw(a,b,c), d4=ccw(a,b,d);
@@ -1091,7 +1147,7 @@ function importPopup(rec){
       zones.slice(0,8).map(r=>`<div style="font-size:12px">・${nameOf(r)}（${catLabelOf(r)}）</div>`).join("")+
       (zones.length>8?`<div style="font-size:11px;color:#888">…共 ${zones.length} 個</div>`:"")
     : `<div class="status-ok" style="margin:6px 0">✔ 未壓到已收錄禁／限航區</div>`;
-  return `<h3>${rec.name||"匯入範圍"}</h3>`+
+  return `<h3>${esc(rec.name||"匯入範圍")}</h3>`+
     `<div style="font-size:12px;color:#555">頂點 ${rec.latlngs.length}　面積 ${fmtArea(A)}</div>`+zl+
     `<div class="pop-actions"><button class="btn" onclick="openGmap(${c.lat.toFixed(6)},${c.lng.toFixed(6)})">Google 地圖</button>`+
     `<button class="btn" onclick="delImport(${rec.id})">刪除</button></div>`;
@@ -1107,13 +1163,22 @@ function addImport(o,{fit=true}={}){
   const rec={id:o.id,name:o.name,color:o.color,latlngs:latlngs,layer:null};
   drawArea(rec); importedAreas.push(rec); renderImportList(); persistImport();
   if(fit){ try{ map.fitBounds(L.latLngBounds(latlngs).pad(0.3)); }catch(e){} }
-  setReadout(`已匯入「${rec.name}」，面積 ${fmtArea(geoArea(latlngs))}`);
+  setReadout(`已匯入「${esc(rec.name)}」，面積 ${fmtArea(geoArea(latlngs))}`);
 }
 window.importFromText=function(){
   setMsg("");
-  const pts=parseImportText(document.getElementById("impText").value||"");
-  if(pts.length<3){ setMsg("至少需要 3 個有效點才能構成範圍"); return; }
+  const raw=document.getElementById("impText").value||"";
   const nm=(document.getElementById("impName").value||"").trim();
+  if(hasDocCoords(raw)){
+    const doc=parseDocAreas(raw,"");
+    if(!doc.areas.length){ setMsg("找到座標，但每個空域至少需要 3 點才能構成範圍"); return; }
+    const base=nm||doc.job;
+    addDocAreas(doc.areas, a=> a.no ? (base?base+"－":"")+"空域"+a.no : (base||("範圍"+impSeq)));
+    document.getElementById("impText").value=""; document.getElementById("impName").value="";
+    return;
+  }
+  const pts=parseImportText(raw);
+  if(pts.length<3){ setMsg("至少需要 3 個有效點才能構成範圍"); return; }
   addImport({id:impSeq++, name:nm||("範圍"+impSeq), color:impColorSel, pts:pts.map(p=>[p.lat,p.lng])});
   document.getElementById("impText").value=""; document.getElementById("impName").value="";
 };
@@ -1149,7 +1214,19 @@ window.importFromFile=function(ev){
     areas.forEach((a,i)=> addImport({id:impSeq++, name:a.name||(base+(areas.length>1?("-"+(i+1)):"")), color:impColorSel, pts:a.pts},{fit:i===0}));
     setMsg("");
   };
-  if(lower.endsWith(".zip")){   // Shapefile 壓縮包
+  if(lower.endsWith(".pdf") || lower.endsWith(".txt")){   // 許可書等文件中的座標
+    const isPdf=lower.endsWith(".pdf");
+    setMsg(isPdf?"讀取 PDF 座標中…":"讀取文件座標中…");
+    const r=new FileReader();
+    r.onload=async()=>{ try{
+        const text=isPdf ? await pdfToText(r.result) : r.result;
+        const doc=parseDocAreas(text, base);
+        if(doc.areas.length){ addDocAreas(doc.areas, a=>a.name); setMsg(""); return; }
+        if(!isPdf){ const pts=parseImportText(text); if(pts.length>=3){ finish([{name:base, pts:pts.map(p=>[p.lat,p.lng])}]); return; } }
+        setMsg("文件中找不到可用的座標範圍（每個範圍需 3 點以上；掃描成圖片的 PDF 無法讀取文字）");
+      }catch(e){ setMsg("文件解析失敗："+esc(e.message||e)); } };
+    if(isPdf) r.readAsArrayBuffer(file); else r.readAsText(file);
+  }else if(lower.endsWith(".zip")){   // Shapefile 壓縮包
     if(typeof shp==="undefined"){ setMsg("Shapefile 解析元件尚未載入，請稍後再試"); ev.target.value=""; return; }
     setMsg("解析 Shapefile 中…");
     const r=new FileReader();
@@ -1201,7 +1278,7 @@ function renderImportList(){
     const d=document.createElement("div"); d.className="item";
     d.style.cssText="display:flex;align-items:center;gap:7px;padding:4px 2px;border-bottom:1px solid #f0f0f0";
     d.innerHTML=`<span class="dot" style="width:11px;height:11px;border-radius:2px;background:${r.color};flex:0 0 auto"></span>`+
-      `<span class="nm" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer" title="點看範圍資訊：${r.name}" onclick="showImportInfo(${r.id})">${r.name}</span>`+
+      `<span class="nm" style="flex:1;min-width:0;word-break:break-all;line-height:1.35;cursor:pointer" title="點看範圍資訊：${esc(r.name)}" onclick="showImportInfo(${r.id})">${esc(r.name)}</span>`+
       `<button class="mini" title="定位並看資訊" onclick="zoomImport(${r.id})">🔍</button>`+
       `<button class="mini" title="開關顯示" onclick="toggleImport(${r.id})">👁️</button>`+
       `<button class="mini" title="刪除" onclick="delImport(${r.id})">🗑️</button>`;
@@ -1358,8 +1435,10 @@ let applyDraw=false, applyPts=[], applyShape=null;
 const applyLayer=L.layerGroup().addTo(map);
 const savedAreasLayer=L.layerGroup().addTo(map);
 const savedAreas=[]; let savedSeq=1;
+let editingApplyId=null;   // 正在修改的暫存圖層 id（其圖形暫時移入繪製層編輯）
 
 window.startApplyDraw=function(){
+  if(editingApplyId!==null) cancelApplyEdit();
   applyDraw=true; applyPts=[]; redrawApply();
   document.getElementById("apply-draw-btn").textContent="繪製中…點地圖加點";
   setMsg("繪製中：在地圖點出頂點（最多6點），可拖曳微調");
@@ -1410,13 +1489,61 @@ window.finishApplyDraw=function(){
   setMsg("已完成，可拖曳頂點微調，或按「暫存為圖層」");
 };
 window.undoApplyPt=function(){ if(applyPts.length){ applyPts.pop(); redrawApply(); } };
-window.clearApply=function(){ applyPts=[]; applyDraw=false; redrawApply();
+window.clearApply=function(){
+  if(editingApplyId!==null){ cancelApplyEdit(); setMsg("已取消修改，保留原範圍"); return; }
+  applyPts=[]; applyDraw=false; redrawApply();
   document.getElementById("apply-draw-btn").textContent="✏️ 繪製多邊形"; setMsg(""); };
+
+/* ---- 修改暫存圖層 ---- */
+function updateApplyEditUI(){
+  const editing=editingApplyId!==null;
+  document.getElementById("apply-save-btn").textContent=editing?"💾 更新圖層":"💾 暫存為圖層";
+  document.getElementById("apply-cancel-edit").style.display=editing?"":"none";
+  document.getElementById("apply-draw-btn").textContent="✏️ 繪製多邊形";
+}
+function resetApplyInputs(){
+  document.getElementById("apply-name").value=""; { const hh=document.getElementById("apply-height"); if(hh) hh.value=""; }
+}
+window.editApply=function(id){
+  const r=savedAreas.find(x=>x.id===id); if(!r) return;
+  if(editingApplyId===id) return;
+  if(editingApplyId!==null) cancelApplyEdit();
+  else if(applyPts.length && !confirm(`目前繪製中的範圍尚未暫存，要放棄它並改為修改「${r.name}」嗎？`)) return;
+  if(tool!=="apply") setTool("apply");
+  editingApplyId=id;
+  savedAreasLayer.removeLayer(r.layer); map.closePopup();
+  applyPts=r.latlngs.map(p=>L.latLng(p.lat,p.lng)); applyDraw=false; redrawApply();
+  document.getElementById("apply-name").value=r.name||"";
+  { const hh=document.getElementById("apply-height"); if(hh) hh.value=r.height||""; }
+  updateApplyEditUI(); renderSavedAreas();
+  try{ map.fitBounds(L.latLngBounds(r.latlngs).pad(0.3)); }catch(e){}
+  setMsg(`修改「${esc(r.name)}」中：拖曳頂點微調，點頂點可刪除；完成後按「更新圖層」`);
+};
+window.cancelApplyEdit=function(){
+  if(editingApplyId===null) return;
+  const r=savedAreas.find(x=>x.id===editingApplyId);
+  if(r) savedAreasLayer.addLayer(r.layer);
+  editingApplyId=null; applyPts=[]; applyDraw=false; redrawApply();
+  resetApplyInputs(); updateApplyEditUI(); renderSavedAreas(); setMsg("");
+};
 
 /* ---- 暫存為圖層 ---- */
 window.saveApplyArea=function(){
   if(applyPts.length<3){ setMsg("請先繪製至少 3 點的多邊形"); return; }
   if(applyPts.length>6){ setMsg("多邊形最多 6 點"); return; }
+  if(editingApplyId!==null){
+    const r=savedAreas.find(x=>x.id===editingApplyId);
+    if(r){
+      r.name=(document.getElementById("apply-name").value||"").trim() || r.name;
+      r.height=(document.getElementById("apply-height")||{}).value||"";
+      r.latlngs=applyPts.slice(); r.info=computeAirspaces(r.latlngs);
+      r.layer.setLatLngs(r.latlngs); savedAreasLayer.addLayer(r.layer);
+      setMsg(`已更新「${esc(r.name)}」（${r.info.count} 個空域）`);
+    }
+    editingApplyId=null; applyPts=[]; applyDraw=false; redrawApply();
+    resetApplyInputs(); updateApplyEditUI(); renderSavedAreas();
+    return;
+  }
   const nm=(document.getElementById("apply-name").value||"").trim() || ("申請區"+savedSeq);
   const info=computeAirspaces(applyPts);
   const hv=(document.getElementById("apply-height")||{}).value||"";
@@ -1427,7 +1554,7 @@ window.saveApplyArea=function(){
   applyPts=[]; applyDraw=false; redrawApply();
   document.getElementById("apply-name").value=""; { const hh=document.getElementById("apply-height"); if(hh) hh.value=""; }
   document.getElementById("apply-draw-btn").textContent="✏️ 繪製多邊形";
-  setMsg(`已暫存「${nm}」（${rec.info.count} 個空域）`);
+  setMsg(`已暫存「${esc(nm)}」（${rec.info.count} 個空域）`);
 };
 function renderSavedAreas(){
   const el=document.getElementById("apply-list"); if(!el) return;
@@ -1435,22 +1562,28 @@ function renderSavedAreas(){
   el.innerHTML="";
   savedAreas.forEach(r=>{
     const over=r.info.count>5, items=r.info.counties.concat(r.info.sea?["海域"]:[]);
-    const d=document.createElement("div"); d.style.cssText="border-bottom:1px solid #f0f0f0;padding:5px 2px";
+    const editing=r.id===editingApplyId;
+    const d=document.createElement("div"); d.style.cssText="border-bottom:1px solid #f0f0f0;padding:5px 2px"+(editing?";background:#fff4e5":"");
     d.innerHTML=`<div style="display:flex;align-items:center;gap:6px">`+
       `<span style="width:11px;height:11px;border-radius:2px;background:#8e24aa;flex:0 0 auto"></span>`+
       `<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r.name)}">${esc(r.name)}</span>`+
       `<span style="font-weight:700;color:${over?'#c62828':'#2e7d32'}">${r.info.count} 空域</span>`+
       `<button class="mini" title="定位" onclick="zoomApply(${r.id})">🔍</button>`+
+      `<button class="mini" title="修改範圍" onclick="editApply(${r.id})">✏️</button>`+
       `<button class="mini" title="刪除" onclick="delApply(${r.id})">🗑️</button></div>`+
-      `<div style="font-size:11px;color:#777;margin:2px 0 0">${items.join("、")}${over?' ⚠需拆件':''}</div>`+
+      `<div style="font-size:11px;color:#777;margin:2px 0 0">${editing?'<b style="color:#e65100">修改中…</b> ':''}${items.join("、")}${over?' ⚠需拆件':''}</div>`+
       `<div class="btnrow" style="margin:4px 0 0">`+
       `<button class="btn" style="padding:3px 7px" onclick="exportApply(${r.id},'geojson')">GeoJSON</button>`+
       `<button class="btn" style="padding:3px 7px" onclick="exportApply(${r.id},'kml')">KML</button></div>`;
     el.appendChild(d);
   });
 }
-window.zoomApply=function(id){ const r=savedAreas.find(x=>x.id===id); if(r){ map.fitBounds(L.latLngBounds(r.latlngs).pad(0.3)); r.layer.openPopup(); } };
-window.delApply=function(id){ const i=savedAreas.findIndex(x=>x.id===id); if(i<0)return; savedAreasLayer.removeLayer(savedAreas[i].layer); savedAreas.splice(i,1); renderSavedAreas(); };
+window.zoomApply=function(id){ const r=savedAreas.find(x=>x.id===id); if(!r) return;
+  if(id===editingApplyId){ map.fitBounds(L.latLngBounds(applyPts.length?applyPts:r.latlngs).pad(0.3)); return; }
+  map.fitBounds(L.latLngBounds(r.latlngs).pad(0.3)); r.layer.openPopup(); };
+window.delApply=function(id){ const i=savedAreas.findIndex(x=>x.id===id); if(i<0)return;
+  if(id===editingApplyId){ editingApplyId=null; applyPts=[]; applyDraw=false; redrawApply(); resetApplyInputs(); updateApplyEditUI(); }
+  savedAreasLayer.removeLayer(savedAreas[i].layer); savedAreas.splice(i,1); renderSavedAreas(); };
 window.toggleCountyLayer=function(cb){
   const cr=countyRecords(); const lyr=cr.length?cr[0].parent:null; if(!lyr) return;
   if(cb.checked) map.addLayer(lyr); else map.removeLayer(lyr);
