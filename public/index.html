@@ -176,18 +176,41 @@
   .baseswitch button.active{background:#455a64;color:#fff;border-color:#455a64}
   .banner{position:absolute;left:0;right:0;bottom:0;z-index:500;background:rgba(30,30,30,.82);color:#fff;font-size:11px;padding:3px 10px;text-align:center}
 </style>
+<link rel="stylesheet" href="interface.css?v=20261010-2">
 </head>
-<body>
+<body data-sheet="none" data-tool="status">
 <div id="map"></div>
-<button id="uiToggle" onclick="toggleUI()">⛶ 隱藏面板</button>
-<button id="helpBtn" title="使用說明／導覽" onclick="showGuide()">?</button>
-
-<div class="panel box">
-  <div class="brandbar" id="brandbar">
-    <span class="brandname" id="brandname"></span>
-    <a class="btn site" href="https://www.reasonaerial.com/?utm_source=map_tool&amp;utm_medium=referral&amp;utm_campaign=airspace_map" target="_blank" rel="noopener">🌐 官網介紹</a>
-    <button class="btn cta" onclick="contactCTA()">📸 想拍這裡？聯絡我們</button>
+<header class="app-header">
+  <a class="app-brand" href="https://www.reasonaerial.com/?utm_source=map_tool&amp;utm_medium=referral&amp;utm_campaign=airspace_map&amp;utm_content=header_brand" target="_blank" rel="noopener" data-cta="header_brand">
+    <img src="logo.png" alt="瑞森航拍官網">
+  </a>
+  <a class="header-link" href="https://www.reasonaerial.com/gallery/?utm_source=map_tool&amp;utm_medium=referral&amp;utm_campaign=airspace_map&amp;utm_content=header_gallery" target="_blank" rel="noopener" data-cta="header_gallery">作品 <span aria-hidden="true">↗</span></a>
+  <button id="helpBtn" title="使用說明" onclick="showGuide()" aria-label="使用說明">?</button>
+</header>
+<section id="searchBox" class="search-box box" aria-label="地點搜尋">
+  <form id="locationSearch" role="search">
+    <span class="search-icon" aria-hidden="true">⌕</span>
+    <input id="locInput" type="text" placeholder="搜尋地點、地址或座標" aria-label="搜尋地點、地址或座標" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="searchOptions" autocomplete="off" enterkeyhint="search" spellcheck="false">
+    <button id="searchClear" type="button" aria-label="清除搜尋" hidden>×</button>
+    <button id="searchSubmit" type="submit" aria-label="搜尋">搜尋</button>
+  </form>
+  <div id="searchResults" hidden>
+    <div class="search-status-row"><p id="searchStatus" role="status" aria-live="polite"></p><button id="clearRecent" type="button" hidden>清除紀錄</button></div>
+    <ul id="searchOptions" role="listbox" aria-label="地點候選結果"></ul>
+    <p class="search-credit">地點資料 © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> · Photon<br>輸入字詞會傳送至搜尋服務；紀錄僅存於本機。</p>
   </div>
+  <div id="dataStatus" class="data-status" role="status" aria-live="polite">空域圖資載入中…</div>
+</section>
+<nav class="workspace-nav" aria-label="地圖工作區">
+  <button id="nav-query" onclick="openQuery()">⌕ 查詢</button>
+  <button id="nav-tools" onclick="setMobileSheet(document.body.dataset.sheet==='tools'?'none':'tools')">⌁ 工具</button>
+  <button id="nav-layers" onclick="setMobileSheet(document.body.dataset.sheet==='layers'?'none':'layers')">▱ 圖層</button>
+  <button id="nav-saved" onclick="setMobileSheet(document.body.dataset.sheet==='saved'?'none':'saved')">☆ 暫存</button>
+</nav>
+<button id="uiToggle" onclick="toggleUI()">⛶ 隱藏面板</button>
+<div class="panel box" aria-label="規劃工具">
+  <div class="sheet-title"><span>規劃工具</span><button class="sheet-close" aria-label="收合工具" onclick="setMobileSheet('none')">×</button></div>
+  <div id="brandbar" hidden><span id="brandname"></span></div>
   <div class="tabs">
     <button id="t-status" class="active" onclick="setTool('status')">查空域</button>
     <button id="t-distance" onclick="setTool('distance')">測距</button>
@@ -197,12 +220,8 @@
     <button id="t-parcel" onclick="setTool('parcel')">地號</button>
   </div>
   <div id="panel-common">
-    <div class="inrow">
-      <input id="locInput" placeholder="地址或座標(緯,經)如 25.03,121.5">
-      <button class="btn primary" onclick="goLocate()">定位</button>
-    </div>
     <button class="btn" id="locateBtn" style="width:100%;margin-bottom:6px" onclick="locateMe()">📍 定位我的位置（持續顯示）</button>
-    <div class="btnrow">
+    <div class="btnrow measure-actions">
       <button class="btn" onclick="undoPoint()">移除最後一點</button>
       <button class="btn" onclick="clearTool()">清除</button>
     </div>
@@ -219,7 +238,7 @@
     </div>
     <div class="hint" style="margin:0 0 6px">檔案支援 Shapefile(壓成含 .shp/.shx/.dbf/.prj 的 zip)、GeoJSON(.json)、KML(.kml)，以及民航局活動申請許可書 PDF（自動讀取各空域座標，名稱為「作業名稱－空域號」），上限 10MB。</div>
     <div class="btnrow"><button class="btn primary" style="width:100%" onclick="openImportReport()">📋 產出報表（範圍內空域單位＋聯絡方式）</button></div>
-    <div class="btnrow"><button class="btn cta" style="width:100%;margin-left:0" onclick="contactCTA()">📩 把範圍寄給瑞森（聯絡我們）</button></div>
+    <div class="btnrow"><button class="btn inquiry-link" style="margin-left:0" onclick="contactCTA()">寄送範圍諮詢</button></div>
     <div class="btnrow"><button class="btn" onclick="copyShare()">🔗 複製分享連結</button></div>
     <div id="import-list" style="max-height:20vh;overflow:auto;margin-top:4px"></div>
   </div>
@@ -237,7 +256,7 @@
     <div class="inrow"><input id="apply-name" placeholder="區域名稱(如 申請區A)" style="flex:1"></div>
     <div class="inrow"><input id="apply-height" type="number" placeholder="飛行高度 公尺(可留空)" style="flex:1"></div>
     <div class="btnrow"><button class="btn primary" id="apply-save-btn" onclick="saveApplyArea()">💾 暫存為圖層</button><button class="btn" id="apply-cancel-edit" style="display:none" onclick="cancelApplyEdit()">取消修改</button></div>
-    <div class="btnrow"><button class="btn cta" style="width:100%;margin-left:0" onclick="contactCTA()">📩 把空域範圍寄給瑞森（聯絡我們）</button></div>
+    <div class="btnrow"><button class="btn inquiry-link" style="margin-left:0" onclick="contactCTA()">寄送範圍諮詢</button></div>
     <label style="display:flex;align-items:center;gap:6px;font-size:12px;margin:4px 0;cursor:pointer"><input type="checkbox" onchange="toggleCountyLayer(this)"> 顯示縣市界（協助沿界拆分）</label>
     <div id="apply-list" style="max-height:24vh;overflow:auto;margin-top:4px"></div>
   </div>
@@ -248,14 +267,16 @@
     <div class="btnrow"><button class="btn primary" onclick="addParcel()">加入清單</button><button class="btn" onclick="cancelParcelPending()">取消定位</button></div>
     <div id="parcel-list" style="max-height:24vh;overflow:auto;margin-top:4px"></div>
     <div class="btnrow"><button class="btn" onclick="copyParcels()">複製清單</button><button class="btn" onclick="downloadParcelsCsv()">下載CSV</button></div>
-    <div class="btnrow"><button class="btn cta" style="width:100%;margin-left:0" onclick="contactCTA()">📩 把地號清單寄給瑞森（聯絡我們）</button></div>
+    <div class="btnrow"><button class="btn inquiry-link" style="margin-left:0" onclick="contactCTA()">寄送清單諮詢</button></div>
   </div>
   <div class="readout" id="readout">點擊地圖或輸入地址／座標開始。</div>
   <div class="msg" id="msg"></div>
   <div class="hint" id="hint"></div>
+  <div id="toolService"></div>
 </div>
 
-<div class="legend box">
+<div class="legend box" aria-label="圖層與底圖">
+  <div class="sheet-title"><span>圖層與底圖</span><button class="sheet-close" aria-label="收合圖層" onclick="setMobileSheet('none')">×</button></div>
   <div class="baseswitch">
     <button id="b-osm" class="active" onclick="setBase('osm')">街道圖</button>
     <button id="b-sat" onclick="setBase('sat')">衛星影像</button>
@@ -270,12 +291,13 @@
   </div>
 </div>
 
-<div class="saved box">
+<div class="saved box" aria-label="暫存點位">
+  <div class="sheet-title"><span>我的暫存</span><button class="sheet-close" aria-label="收合暫存" onclick="setMobileSheet('none')">×</button></div>
   <h4><span>暫存點位</span><button class="btn" style="padding:2px 7px" onclick="clearSaved()">全部清除</button></h4>
   <div id="saved-list"><div class="empty">尚無暫存點位。查空域時可「暫存此點」。</div></div>
 </div>
 
-<div id="resultPanel" class="box"></div>
+<div id="resultPanel" class="box" aria-label="查詢結果" tabindex="-1"></div>
 
 <div id="guideOverlay" onclick="if(event.target===this)closeGuide()">
   <div id="guideCard">
@@ -283,16 +305,17 @@
     <div class="g-sub">免費工具，圖資每日與民航局同步。三步驟快速上手：</div>
     <div class="g-item"><span class="ic">🔍</span><span><b>查空域</b>：在地圖點任一位置，或搜尋地址／座標／Plus Code，立刻看出有沒有壓到禁航區、限航區，並顯示天氣與地面海拔。</span></div>
     <div class="g-item"><span class="ic">📐</span><span><b>測距・測面積・畫範圍</b>：切上方分頁，點幾下就能量距離、面積，或畫出申請範圍自動算空域數、匯出檔案。</span></div>
-    <div class="g-item"><span class="ic">🗂️</span><span><b>地籍圖・地號・聯絡</b>：可疊加地籍圖、標記地號成清單，並一鍵把範圍或地號寄給瑞森。</span></div>
+    <div class="g-item"><span class="ic">🗂️</span><span><b>地籍圖・地號・聯絡</b>：可疊加地籍圖、標記地號成清單，並整理範圍或地號，供後續諮詢。</span></div>
     <div class="g-note">小提醒：圖資僅供參考，實際飛行仍以主管機關最新公告為準。</div>
     <button class="g-btn" onclick="closeGuide()">開始使用</button>
   </div>
 </div>
-<div class="banner">資料來源：交通部民用航空局（僅供參考，實際飛行以主管機關最新公告為準）· 每日自動同步 · 測量值為概估 · 由 <a href="https://www.reasonaerial.com/?utm_source=map_tool&amp;utm_medium=referral&amp;utm_campaign=airspace_map" target="_blank" rel="noopener" style="color:#C8973C;font-weight:700;text-decoration:none">瑞森航拍</a> 製作維護</div>
+<div class="banner">資料來源：交通部民用航空局（僅供參考，實際飛行以主管機關最新公告為準）· 每日自動同步 · 測量值為概估 · 由 <a href="https://www.reasonaerial.com/?utm_source=map_tool&amp;utm_medium=referral&amp;utm_campaign=airspace_map" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline">瑞森航拍</a> 製作維護</div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
+<script src="map-core.js?v=20261010-1"></script>
 <script>
 /* ===================== 基本地圖 ===================== */
 const DATA_BASE = "./";
@@ -344,7 +367,7 @@ window.contactCTA=function(){
       const pts=r.latlngs.map((p,i)=>`  ${i+1}. ${p.lat.toFixed(6)}, ${p.lng.toFixed(6)}`).join("\n");
       body+=`範圍：${r.name}\n中心座標：${c.lat.toFixed(5)}, ${c.lng.toFixed(5)}\n面積：${fmtArea(A)}\n`+
             `邊界點位（緯度, 經度）：\n${pts}\n`+
-            `空域狀態：${z.length? z.map(x=>nameOf(x)+"("+catLabelOf(x)+")").join("、") : "未壓到已收錄禁/限航區"}\n\n`; });
+            `空域狀態：${ReasonMapCore.querySummary(z,dataState).title}\n${z.map(x=>nameOf(x)+"("+catLabelOf(x)+")").join("、")}\n\n`; });
     if(importedAreas.length || savedMarkers.length) body+="地圖連結："+shareState()+"\n";
   } else if(!(typeof parcels!=="undefined" && parcels.length)){
     body+="（提示：可先用「測面積」圈出範圍、到「匯入範圍」貼上座標、用「繪製空域」畫出範圍，或到「地號」標記地號，再按此鈕就會自動帶入資料）\n";
@@ -372,7 +395,7 @@ window.copyInquiry=function(){
 
 // 面板不要把點擊事件傳到地圖
 ["panel","legend","saved"].forEach(()=>{});
-document.querySelectorAll(".panel,.legend,.saved,#uiToggle,#resultPanel").forEach(el=>{
+document.querySelectorAll(".panel,.legend,.saved,#uiToggle,#resultPanel,.search-box,.app-header,.workspace-nav").forEach(el=>{
   L.DomEvent.disableClickPropagation(el); L.DomEvent.disableScrollPropagation(el);
 });
 
@@ -392,6 +415,7 @@ function catOf(props){
   return String(props["空域類別名稱"]||"").indexOf("限航")>=0 ? "restricted" : "prohibited";
 }
 function styleFor(color){return {color:color, weight:1.3, fillColor:color, fillOpacity:0.28};}
+const dataState={phase:'loading',stale:false,sample:false,updated:'',failed:[]};
 const records = [];   // {feature, layer, parent, baseStyle, bounds, color, groupLabel}
 
 /* ===================== 幾何工具 ===================== */
@@ -457,17 +481,8 @@ function areaUnitSelectHtml(){
 window.onAreaUnit=function(v){ areaUnitSel=v; redrawMeasure(); };
 // 解析座標輸入；台灣 lat 21~26、lng 118~123，必要時自動對調
 function parseCoord(str){
-  let t=String(str).trim()
-    .replace(/[（）()［］\[\]]/g," ")   // 去括號
-    .replace(/[，、]/g,",")               // 全形逗號轉半形
-    .replace(/\s+/g," ").trim();
-  const m = t.match(/^(-?\d+(?:\.\d+)?)\s*[,\s]\s*(-?\d+(?:\.\d+)?)$/);
-  if(!m) return null;
-  let a=parseFloat(m[1]), b=parseFloat(m[2]);
-  let lat=a, lng=b;
-  if(!(a>=18 && a<=27) && (b>=18 && b<=27)){ lat=b; lng=a; } // 疑似 lng,lat → 對調
-  if(lat<-90||lat>90||lng<-180||lng>180) return null;
-  return L.latLng(lat,lng);
+  const p=ReasonMapCore.parseLocation(str);
+  return p ? L.latLng(p.lat,p.lng) : null;
 }
 /* ===================== Plus Code（Open Location Code）解析 ===================== */
 const OLC=(function(){
@@ -540,13 +555,13 @@ function highlight(rec){
 }
 function zonesAt(latlng){
   const pt=[latlng.lng, latlng.lat];
-  const ms=records.filter(r=> r.bounds && r.bounds.contains(latlng) && pipGeom(pt, r.feature.geometry));
+  const ms=records.filter(r=> r.groupLabel!=="行政區界" && r.bounds && r.bounds.contains(latlng) && pipGeom(pt, r.feature.geometry));
   ms.sort((a,b)=>boundsArea(a.bounds)-boundsArea(b.bounds));
   return ms;
 }
-function nameOf(rec){ return (rec.feature.properties||{})["空域名稱"] || "區域"; }
+function nameOf(rec){ const p=rec.feature.properties||{}; return p["空域名稱"] || p["名稱"] || p.name || countyNameOf(rec.feature) || rec.groupLabel || "區域"; }
 function catLabelOf(rec){ return rec.groupLabel||""; }
-function catColorOf(rec){ const c=catOf(rec.feature.properties||{}); return (CAT[c]&&CAT[c].color)||rec.color; }
+function catColorOf(rec){ return rec.color || (CAT[catOf(rec.feature.properties||{})]||{}).color || "#64748b"; }
 window.openGmap=function(lat,lng){ window.open(`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`,"_blank"); };
 
 // 詳情顯示的欄位（隱藏內部色碼/代號欄位）
@@ -561,33 +576,33 @@ function closeResult(){
   const el=document.getElementById("resultPanel"); if(el){ el.style.display="none"; el.innerHTML=""; }
   clearHighlight();
   if(queryMarker){ map.removeLayer(queryMarker); queryMarker=null; }
+  curQuery=null; curMatches=[]; setMobileSheet('none');
 }
 function renderResult(){
   const el=document.getElementById("resultPanel"); if(!el) return;
   el.innerHTML=""; el.style.display="block";
   const head=document.createElement("div"); head.className="rp-head";
+  const summary=ReasonMapCore.querySummary(curMatches,dataState);
+  const counties=records.filter(r=>r.groupLabel==='行政區界' && r.bounds && r.bounds.contains(L.latLng(curQuery.lat,curQuery.lng)) && pipGeom([curQuery.lng,curQuery.lat],r.feature.geometry));
   head.innerHTML =
-    `<div class="rp-title">${curMatches.length
-       ? '<span class="status-warn">⚠ 位於 '+curMatches.length+' 個管制區</span>'
-       : '<span class="status-ok">✔ 不在禁／限航區內</span>'}</div>`+
-    `<div class="rp-coord">座標 ${curQuery.lat.toFixed(5)}, ${curQuery.lng.toFixed(5)}</div>`+
-    `<button class="rp-close" title="關閉">×</button>`;
+    `<div class="result-eyebrow">空域查詢結果</div><div class="rp-title status-${summary.kind}">${esc(summary.title)}</div>`+
+    `<div class="rp-coord">${counties.map(r=>esc(nameOf(r))).join('、')}${counties.length?' · ':''}${curQuery.lat.toFixed(5)}, ${curQuery.lng.toFixed(5)}</div>`+
+    `<button class="rp-close" title="關閉" aria-label="關閉查詢結果">×</button>`;
   el.appendChild(head);
   head.querySelector(".rp-close").addEventListener("click", closeResult);
 
-  // 飛行條件卡：距最近禁航區(即時) + 天氣/風況/日出日落黃金時刻(非同步)
-  const cond=document.createElement("div"); cond.className="rp-cond";
-  el.appendChild(cond);
-  fetchConditions(curQuery.lat, curQuery.lng, cond);
-
+  const notice=document.createElement('div'); notice.className='result-notice';
+  notice.textContent=summary.note; el.appendChild(notice);
+  if(dataState.updated){const stamp=document.createElement('p');stamp.className='result-stamp';stamp.textContent='圖資更新：'+dataState.updated+'（台北時間）';el.appendChild(stamp);}
   const list=document.createElement("div"); list.className="rp-list"; el.appendChild(list);
   if(!curMatches.length){
-    list.innerHTML=`<div class="rp-empty">此位置不在已收錄的禁／限航區內，仍請以主管機關最新公告為準。</div>`;
+    list.innerHTML=`<div class="rp-empty">${summary.kind==="clear"?"可繼續規劃拍攝範圍，並核對現場與最新公告。":"目前沒有可列出的命中項目，請先確認圖資狀態。"}</div>`;
   }else{
-    curMatches.forEach(r=>{
+    const ordered=curMatches.slice().sort((a,b)=>Number(['國家公園','商港區'].includes(a.groupLabel))-Number(['國家公園','商港區'].includes(b.groupLabel)));
+    ordered.forEach(r=>{
       const col=catColorOf(r), lbl=catLabelOf(r), txt = col==="#ffd400" ? "#1a1a1a" : "#fff";
       const item=document.createElement("div"); item.className="rp-item";
-      const hd=document.createElement("div"); hd.className="rp-item-head";
+      const hd=document.createElement("button"); hd.type='button';hd.className="rp-item-head";hd.setAttribute('aria-expanded','false');
       hd.innerHTML=`<span class="tag" style="background:${col};color:${txt}">${esc(lbl)}</span>`+
                    `<span class="nm">${esc(nameOf(r))}</span><span class="caret">▾</span>`;
       const bd=document.createElement("div"); bd.className="rp-item-body"; bd.style.display="none";
@@ -595,14 +610,19 @@ function renderResult(){
       hd.addEventListener("click",()=>{
         const isOpen=bd.style.display!=="none";
         list.querySelectorAll(".rp-item-body").forEach(b=>b.style.display="none");
-        list.querySelectorAll(".rp-item-head").forEach(h=>h.classList.remove("open"));
+        list.querySelectorAll(".rp-item-head").forEach(h=>{h.classList.remove("open");h.setAttribute("aria-expanded","false");});
         if(isOpen){ clearHighlight(); }
-        else{ bd.style.display="block"; hd.classList.add("open"); highlight(r); }
+        else{ bd.style.display="block"; hd.classList.add("open");hd.setAttribute("aria-expanded","true"); highlight(r); }
       });
       item.appendChild(hd); item.appendChild(bd); list.appendChild(item);
     });
-    const first=list.querySelector(".rp-item-head"); if(first) first.click();  // 預設展開第一個
+    // Keep the overview visible; users expand the restriction they need.
   }
+  el.insertAdjacentHTML('beforeend',serviceCard(summary.restrictionCount?'regulations':'commercial','query_result'));
+  const weather=document.createElement('details');weather.className='weather-details';
+  const weatherTitle=document.createElement('summary');weatherTitle.textContent='天氣、日照與地面海拔';weather.appendChild(weatherTitle);
+  const cond=document.createElement('div');cond.className='rp-cond';weather.appendChild(cond);el.appendChild(weather);
+  weather.addEventListener('toggle',()=>{if(weather.open&&!weather.dataset.loaded){weather.dataset.loaded='true';fetchConditions(curQuery.lat,curQuery.lng,cond);}});
   const act=document.createElement("div"); act.className="rp-actions";
   const g=document.createElement("button"); g.className="btn"; g.textContent="Google 地圖";
   g.addEventListener("click",()=>openGmap(curQuery.lat,curQuery.lng));
@@ -610,6 +630,7 @@ function renderResult(){
   s.addEventListener("click",showSaveForm);
   act.appendChild(g); act.appendChild(s); el.appendChild(act);
   const sf=document.createElement("div"); sf.id="rp-saveform"; el.appendChild(sf);
+  setMobileSheet('result');
 }
 function doStatus(latlng){
   clearHighlight();
@@ -618,7 +639,7 @@ function doStatus(latlng){
   if(queryMarker) map.removeLayer(queryMarker);
   queryMarker=L.marker(latlng,{icon:markerIcon("#1565c0")}).addTo(map);
   renderResult();
-  setReadout(curMatches.length ? `此點位於 ${curMatches.length} 個管制區域` : "此點不在已收錄禁/限航區內");
+  setReadout(esc(ReasonMapCore.querySummary(curMatches,dataState).title));
 }
 
 /* ===================== 飛行條件（天氣 / 日照 / 距最近禁航區） ===================== */
@@ -647,7 +668,7 @@ function nearestProhibitedHtml(latlng){
   // 此點已落在管制區內時不顯示距離(下方清單已列出實際區域)；不做任何能否飛行的判斷
   if(curMatches.length) return "";
   const cands=[];
-  for(const r of records){ if(!r.bounds || catOf(r.feature.properties||{})!=="prohibited") continue;
+  for(const r of records){ if(!r.bounds || r.groupLabel!=="禁航區") continue;
     cands.push({r, db:distToBoundsM(latlng,r.bounds)}); }
   if(!cands.length) return "";
   cands.sort((a,b)=>a.db-b.db);
@@ -822,7 +843,7 @@ function markerIcon(color){
 }
 function addSaved(rec){
   const m=L.marker([rec.lat,rec.lng],{icon:markerIcon(rec.color)}).addTo(savedLayer);
-  const pop=`<h3>${rec.desc||"暫存點位"}</h3><div style="color:#555;font-size:12px">${rec.lat.toFixed(5)}, ${rec.lng.toFixed(5)}</div>`+
+  const pop=`<h3>${esc(rec.desc||"暫存點位")}</h3><div style="color:#555;font-size:12px">${rec.lat.toFixed(5)}, ${rec.lng.toFixed(5)}</div>`+
     `<div class="pop-actions"><button class="btn" onclick="openGmap(${rec.lat},${rec.lng})">Google 地圖</button>`+
     `<button class="btn" onclick="checkSaved(${rec.id})">查此點空域</button>`+
     `<button class="btn" onclick="delSaved(${rec.id})">刪除</button></div>`;
@@ -843,7 +864,7 @@ function renderSavedList(){
   savedMarkers.forEach(r=>{
     const d=document.createElement("div"); d.className="item";
     d.innerHTML=`<span class="dot" style="background:${r.color}"></span>`+
-      `<span class="nm" title="${r.desc||''}">${r.desc||"(無描述)"}</span>`+
+      `<span class="nm" title="${esc(r.desc||'')}">${esc(r.desc||"(無描述)")}</span>`+
       `<button class="mini" title="定位" onclick="flyTo(${r.lat},${r.lng})">🔍</button>`+
       `<button class="mini" title="Google 地圖" onclick="openGmap(${r.lat},${r.lng})">🗺️</button>`+
       `<button class="mini" title="刪除" onclick="delSaved(${r.id})">🗑️</button>`;
@@ -871,9 +892,9 @@ const measureLayer=L.layerGroup().addTo(map);
 let mpts=[];  // L.latLng[]
 
 function setTool(t){
-  tool=t;
+  tool=t; document.body.dataset.tool=t;
   ["status","distance","area","import","apply","parcel"].forEach(k=>{
-    const b=document.getElementById("t-"+k); if(b) b.classList.toggle("active", k===t);
+    const b=document.getElementById("t-"+k); if(b) { b.classList.toggle("active", k===t); b.setAttribute("aria-pressed",String(k===t)); }
   });
   setMsg("");
   const common=(t==="status"||t==="distance"||t==="area");
@@ -887,6 +908,8 @@ function setTool(t){
   else if(t==="import"){ setHint("貼上或匯入範圍(KML／GeoJSON／座標)，繪成範圍後可查壓到哪些禁／限航區，並按「產出報表」列出範圍內各空域單位的聯絡方式。"); clearMeasure(); closeResult(); setReadout(`已匯入 ${importedAreas.length} 個範圍。`); }
   else if(t==="apply"){ setHint("繪製申請多邊形（最多6點），即時顯示空域數，可暫存並匯出給民航局。"); clearMeasure(); closeResult(); setReadout("按「繪製多邊形」開始，在地圖上點出頂點。"); }
   else if(t==="parcel"){ setHint("在地圖點土地位置標記，輸入地號加入清單；可多筆、單筆刪除、導出並寄給我們。"); clearMeasure(); closeResult(); setReadout(parcels.length?`已選 ${parcels.length} 筆地號。`:"點地圖標記位置，或直接在左側輸入地號加入。"); }
+  if(t!=="status")setMobileSheet('tools');
+  document.getElementById('toolService').innerHTML=['parcel','apply','import'].includes(t)?serviceCard(t==='parcel'?'survey':t==='apply'?'construction':'commercial','planning_tools'):'';
 }
 function addMeasurePoint(latlng){
   mpts.push(latlng); redrawMeasure();
@@ -926,66 +949,45 @@ function redrawMeasure(){
   }
 }
 
-/* ===================== 定位輸入（座標 / 地址） ===================== */
-async function nomiGeo(q){
-  try{
-    const url=`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&accept-language=zh-TW&countrycodes=tw&q=${encodeURIComponent(q)}`;
-    const res=await fetch(url,{headers:{"Accept":"application/json"}});
-    if(res.ok){ const a=await res.json(); if(a&&a.length) return L.latLng(parseFloat(a[0].lat),parseFloat(a[0].lon)); }
-  }catch(e){}
-  return null;
-}
-async function photonGeo(q){
-  try{
-    const url=`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=1&lang=default&lat=23.7&lon=120.9`;
-    const res=await fetch(url);
-    if(res.ok){ const j=await res.json(); const f=j&&j.features&&j.features[0];
-      if(f&&f.geometry&&f.geometry.coordinates){ const c=f.geometry.coordinates; return L.latLng(c[1],c[0]); } }
-  }catch(e){}
-  return null;
-}
-async function geocode(q){
-  const vs=addrVariants(q);
-  for(const v of vs.slice(0,3)){ const r=await nomiGeo(v); if(r) return r; }   // Nominatim 各變體
-  const r2=await photonGeo(vs[0]||q); if(r2) return r2;                        // Photon 後備
-  return await nomiGeo((vs[0]||q)+" 台灣");                                     // 最後補國名
-}
-async function goLocate(){
-  const v=(document.getElementById("locInput").value||"").trim();
-  setMsg("");
-  if(!v){ setMsg("請輸入地址、座標或 Plus Code"); return; }
-  let ll=parseCoord(v);                       // 1) 座標（含括號、全形逗號）
-  if(!ll){                                    // 2) Plus Code（含短碼＋地名參考）
-    const pc=findPlusCode(v);
-    if(pc){
-      setMsg("解析 Plus Code 中…");
-      if(OLC.isFull(pc)){ const d=OLC.decode(pc); ll=L.latLng(d.latC,d.lngC); }
-      else{
-        const loc=v.replace(pc,"").trim();
-        const ref=await geocode(loc||"台灣") || map.getCenter();
-        const rc=OLC.recover(pc, ref.lat, ref.lng);
-        ll=L.latLng(rc[0],rc[1]);
-      }
-    }
-  }
-  if(!ll){ setMsg("查詢地址中…"); ll=await geocode(v); }   // 3) 地址
-  if(!ll){ setMsg("找不到，請改用「緯度,經度」座標、Plus Code，或直接點地圖"); return; }
-  setMsg("");
-  map.setView(ll, Math.max(map.getZoom(),16));
-  if(tool==="status") doStatus(ll); else addMeasurePoint(ll);
-}
-window.goLocate=goLocate;
-document.getElementById("locInput").addEventListener("keydown",function(e){ if(e.key==="Enter"){ e.preventDefault(); goLocate(); } });
-
 /* ===================== 地圖點擊分派 ===================== */
 map.on("click", function(e){
   // 點在彈窗或控制項上時不要重新查詢（修正「跳到點擊座標」）
   const tg=e.originalEvent && e.originalEvent.target;
-  if(tg && tg.closest && tg.closest(".leaflet-popup, .panel, .legend, .saved, .leaflet-control, #uiToggle, #resultPanel")) return;
+  if(tg && tg.closest && tg.closest(".leaflet-popup, .panel, .legend, .saved, .leaflet-control, .search-box, .app-header, .workspace-nav, #uiToggle, #resultPanel")) return;
   if(tool==="status") doStatus(e.latlng);
   else if(tool==="distance" || tool==="area") addMeasurePoint(e.latlng);
   else if(tool==="apply" && applyDraw) addApplyVertex(e.latlng);
   else if(tool==="parcel") addParcelPoint(e.latlng);
+});
+
+/* ===================== 工作區與官網入口 ===================== */
+function openQuery(){
+  setTool('status');
+  if(curQuery){renderResult();}else{setMobileSheet('none');document.getElementById('locInput').focus();}
+}
+function setMobileSheet(sheet){
+  document.body.dataset.sheet=sheet;
+  ['query','tools','layers','saved'].forEach(name=>{
+    const el=document.getElementById('nav-'+name);
+    if(el)el.setAttribute('aria-pressed',String(name===sheet||(name==='query'&&(sheet==='none'||sheet==='result'))));
+  });
+  if(sheet==='layers'){document.getElementById('legend-wrap').style.display='block';document.getElementById('lg-caret').textContent='▾';}
+}
+const SERVICE_LINKS={
+  regulations:{path:'/regulations/drone-restricted-airspace-check/',label:'空域核查指南'},
+  commercial:{path:'/services/commercial-aerial-photography/',label:'空拍服務'},
+  construction:{path:'/services/construction-aerial-photography/',label:'工程空拍'},
+  survey:{path:'/services/aerial-3d-scanning/',label:'測繪與 3D 掃描'}
+};
+function serviceCard(kind,placement){
+  const info=SERVICE_LINKS[kind]||SERVICE_LINKS.commercial;
+  const url=new URL(info.path,BRAND.site);
+  url.search=new URLSearchParams({utm_source:'map_tool',utm_medium:'referral',utm_campaign:'airspace_map',utm_content:placement+'_'+kind}).toString();
+  return `<aside class="service-card"><span>延伸參考</span><a href="${esc(url.href)}" target="_blank" rel="noopener" data-cta="${placement}" data-service="${kind}">${info.label} <span aria-hidden="true">↗</span></a></aside>`;
+}
+document.addEventListener('click',event=>{
+  const link=event.target.closest('[data-cta]');if(!link)return;
+  if(typeof gtag==='function')gtag('event','map_website_click',{placement:link.dataset.cta,service:link.dataset.service||'brand',transport_type:'beacon'});
 });
 
 /* ===================== 小工具 ===================== */
@@ -995,8 +997,6 @@ function setHint(h){ document.getElementById("hint").innerHTML=h; }
 window.showGuide=function(){ document.getElementById("guideOverlay").classList.add("show"); };
 window.closeGuide=function(){ document.getElementById("guideOverlay").classList.remove("show");
   try{ localStorage.setItem("droneGuideSeen","1"); }catch(e){} };
-(function(){ let seen=false; try{ seen=localStorage.getItem("droneGuideSeen")==="1"; }catch(e){}
-  if(!seen){ setTimeout(()=>{ const g=document.getElementById("guideOverlay"); if(g) g.classList.add("show"); }, 600); } })();
 window.toggleUI=function(){
   const hidden=document.body.classList.toggle("ui-hidden");
   document.getElementById("uiToggle").textContent = hidden ? "⛶ 顯示面板" : "⛶ 隱藏面板";
@@ -1124,7 +1124,7 @@ function areaZones(latlngs){
   const cLng=latlngs.reduce((s,p)=>s+p.lng,0)/latlngs.length;
   const hits=[];
   for(const r of records){
-    if(!r.bounds || !r.bounds.intersects(b)) continue;
+    if(r.groupLabel==='行政區界' || !r.bounds || !r.bounds.intersects(b)) continue;
     let hit=false;
     // 1) 範圍任一頂點落在空域內
     for(const p of latlngs){ if(pipGeom([p.lng,p.lat],r.feature.geometry)){hit=true;break;} }
@@ -1142,11 +1142,9 @@ function areaZones(latlngs){
 }
 function importPopup(rec){
   const A=geoArea(rec.latlngs), zones=areaZones(rec.latlngs), c=L.latLngBounds(rec.latlngs).getCenter();
-  let zl = zones.length
-    ? `<div class="status-warn" style="margin:6px 0">⚠ 壓到 ${zones.length} 個管制區：</div>`+
-      zones.slice(0,8).map(r=>`<div style="font-size:12px">・${nameOf(r)}（${catLabelOf(r)}）</div>`).join("")+
-      (zones.length>8?`<div style="font-size:11px;color:#888">…共 ${zones.length} 個</div>`:"")
-    : `<div class="status-ok" style="margin:6px 0">✔ 未壓到已收錄禁／限航區</div>`;
+  const summary=ReasonMapCore.querySummary(zones,dataState);
+  let zl=`<div class="status-${summary.kind}" style="margin:6px 0">${esc(summary.title)}</div><div class="hint">${esc(summary.note)}</div>`+
+    zones.slice(0,8).map(r=>`<div style="font-size:12px">・${esc(nameOf(r))}（${esc(catLabelOf(r))}）</div>`).join('');
   return `<h3>${esc(rec.name||"匯入範圍")}</h3>`+
     `<div style="font-size:12px;color:#555">頂點 ${rec.latlngs.length}　面積 ${fmtArea(A)}</div>`+zl+
     `<div class="pop-actions"><button class="btn" onclick="openGmap(${c.lat.toFixed(6)},${c.lng.toFixed(6)})">Google 地圖</button>`+
@@ -1309,6 +1307,10 @@ function restoreImport(){
 }
 
 /* ===================== 匯入範圍：範圍內空域單位報表 ===================== */
+function requireCompleteData(){
+  if(ReasonMapCore.querySummary([],dataState).kind==='clear')return true;
+  setMsg('圖資尚未完整或已逾期，暫時無法產出空域報表。請先在搜尋列重試載入。');setMobileSheet('tools');return false;
+}
 function reportRangeZones(rec){
   // 範圍壓到的空域單位（排除行政區界，那不是聯絡單位）
   return areaZones(rec.latlngs).filter(r=> r.groupLabel!=="行政區界");
@@ -1319,7 +1321,7 @@ function reportRows(){
 function zoneReportCells(r){
   const p=r.feature.properties||{};
   const g=k=>{ let v=p[k]; return (v==null||String(v).trim()==="")?"":String(v).trim(); };
-  const cat=(CAT[catOf(p)]||{}).label || r.groupLabel || "";
+  const cat=r.groupLabel || (CAT[catOf(p)]||{}).label || "";
   const eff=[g("有效日期起"),g("有效日期迄")].filter(Boolean).join(" ~ ");
   return { name:nameOf(r), cat,
     org:(g("主管機關名稱")||g("主管機關")),
@@ -1327,6 +1329,7 @@ function zoneReportCells(r){
     contact:g("聯絡方式"), eff, desc:g("空域說明") };
 }
 window.openImportReport=function(){
+  if(!requireCompleteData())return;
   if(!importedAreas.length){ setTool("import"); setMsg("尚無匯入範圍，請先貼上座標或匯入檔案框出範圍"); return; }
   const el=document.getElementById("resultPanel"); if(!el) return;
   const data=reportRows();
@@ -1352,7 +1355,7 @@ window.openImportReport=function(){
   html+=`<div class="rp-actions"><button class="btn" onclick="downloadImportReportHtml()">⬇ 下載報表</button>`+
         `<button class="btn" onclick="downloadImportReportCsv()">⬇ CSV</button>`+
         `<button class="btn primary" onclick="printImportReport()">🖨 列印</button></div>`;
-  el.innerHTML=html; el.style.display="block";
+  el.innerHTML=html+serviceCard('commercial','range_report'); el.style.display="block";setMobileSheet('result');
 };
 function importReportHtmlDoc(){
   const data=reportRows();
@@ -1373,7 +1376,7 @@ function importReportHtmlDoc(){
     body+
     `<p class="foot">資料來源：交通部民用航空局（每日同步；僅供參考，實際仍應以主管機關最新公告為準）。<br>本報表由瑞森航拍・無人機空域地圖工具產生 · map.reasonaerial.com</p></body></html>`;
 }
-window.downloadImportReportHtml=function(){ downloadText(importReportHtmlDoc(),"空域單位報表.html","text/html"); };
+window.downloadImportReportHtml=function(){ if(!requireCompleteData())return;downloadText(importReportHtmlDoc(),"空域單位報表.html","text/html"); };
 function importReportCsv(){
   const data=reportRows();
   const rows=[["範圍","空域名稱","類別","主管機關","會商機關","聯絡方式","有效期間"]];
@@ -1382,8 +1385,9 @@ function importReportCsv(){
   const csv=rows.map(r=>r.map(x=>`"${String(x==null?"":x).replace(/"/g,'""')}"`).join(",")).join("\r\n");
   return "﻿"+csv;
 }
-window.downloadImportReportCsv=function(){ downloadText(importReportCsv(),"空域單位報表.csv","text/csv"); };
+window.downloadImportReportCsv=function(){ if(!requireCompleteData())return;downloadText(importReportCsv(),"空域單位報表.csv","text/csv"); };
 window.printImportReport=function(){
+  if(!requireCompleteData())return;
   const w=window.open("","_blank");
   if(!w){ setMsg("瀏覽器阻擋了列印視窗，請改用「下載報表」再列印"); return; }
   w.document.write(importReportHtmlDoc()); w.document.close(); w.focus();
@@ -1410,6 +1414,7 @@ function polyGeom(latlngs){
 }
 // 空域數 = 不同縣市 + 是否延伸到海域（陸地以外）
 function computeAirspaces(latlngs){
+  if(ReasonMapCore.querySummary([],dataState).kind!=='clear'||!countyRecords().length)return {counties:[],sea:false,count:0,unknown:true};
   if(latlngs.length<3) return {counties:[],sea:false,count:0};
   const cr=countyRecords(), geom=polyGeom(latlngs);
   const xs=latlngs.map(p=>p.lng), ys=latlngs.map(p=>p.lat);
@@ -1465,6 +1470,7 @@ function redrawApply(){
   drawApplyShape(); updateApplyStatus();
 }
 function airspaceHtml(info){
+  if(info.unknown)return '<span class="status-unknown">圖資尚未完整或已逾期，空域數待確認。</span>';
   const items=info.counties.concat(info.sea?["海域"]:[]);
   let h=`空域數：<b>${info.count}</b>（${items.join("、")||"—"}）`;
   if(info.count>5){
@@ -1538,7 +1544,7 @@ window.saveApplyArea=function(){
       r.height=(document.getElementById("apply-height")||{}).value||"";
       r.latlngs=applyPts.slice(); r.info=computeAirspaces(r.latlngs);
       r.layer.setLatLngs(r.latlngs); savedAreasLayer.addLayer(r.layer);
-      setMsg(`已更新「${esc(r.name)}」（${r.info.count} 個空域）`);
+      setMsg(`已更新「${esc(r.name)}」（${ReasonMapCore.airspaceCountText(r.info)}）`);
     }
     editingApplyId=null; applyPts=[]; applyDraw=false; redrawApply();
     resetApplyInputs(); updateApplyEditUI(); renderSavedAreas();
@@ -1549,25 +1555,26 @@ window.saveApplyArea=function(){
   const hv=(document.getElementById("apply-height")||{}).value||"";
   const rec={id:savedSeq++, name:nm, height:hv, latlngs:applyPts.slice(), info};
   const poly=L.polygon(rec.latlngs,{color:"#8e24aa",weight:2.5,fillColor:"#8e24aa",fillOpacity:0.15});
-  poly.bindPopup(()=>`<b>${esc(rec.name)}</b><br>空域數 ${rec.info.count}（${rec.info.counties.concat(rec.info.sea?['海域']:[]).join('、')}）`);
+  poly.bindPopup(()=>`<b>${esc(rec.name)}</b><br>${airspaceHtml(computeAirspaces(rec.latlngs))}`);
   poly.addTo(savedAreasLayer); rec.layer=poly; savedAreas.push(rec); renderSavedAreas();
   applyPts=[]; applyDraw=false; redrawApply();
   document.getElementById("apply-name").value=""; { const hh=document.getElementById("apply-height"); if(hh) hh.value=""; }
   document.getElementById("apply-draw-btn").textContent="✏️ 繪製多邊形";
-  setMsg(`已暫存「${esc(nm)}」（${rec.info.count} 個空域）`);
+  setMsg(`已暫存「${esc(nm)}」（${ReasonMapCore.airspaceCountText(rec.info)}）`);
 };
 function renderSavedAreas(){
   const el=document.getElementById("apply-list"); if(!el) return;
   if(!savedAreas.length){ el.innerHTML=`<div style="color:#999;padding:4px 0">尚無暫存區域。繪製後按「暫存為圖層」。</div>`; return; }
   el.innerHTML="";
   savedAreas.forEach(r=>{
+    r.info=computeAirspaces(r.latlngs);
     const over=r.info.count>5, items=r.info.counties.concat(r.info.sea?["海域"]:[]);
     const editing=r.id===editingApplyId;
     const d=document.createElement("div"); d.style.cssText="border-bottom:1px solid #f0f0f0;padding:5px 2px"+(editing?";background:#fff4e5":"");
     d.innerHTML=`<div style="display:flex;align-items:center;gap:6px">`+
       `<span style="width:11px;height:11px;border-radius:2px;background:#8e24aa;flex:0 0 auto"></span>`+
       `<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r.name)}">${esc(r.name)}</span>`+
-      `<span style="font-weight:700;color:${over?'#c62828':'#2e7d32'}">${r.info.count} 空域</span>`+
+      `<span style="font-weight:700;color:${r.info.unknown?'#946820':over?'#c62828':'#315f52'}">${ReasonMapCore.airspaceCountText(r.info)}</span>`+
       `<button class="mini" title="定位" onclick="zoomApply(${r.id})">🔍</button>`+
       `<button class="mini" title="修改範圍" onclick="editApply(${r.id})">✏️</button>`+
       `<button class="mini" title="刪除" onclick="delApply(${r.id})">🗑️</button></div>`+
@@ -1626,11 +1633,11 @@ window.exportApply=function(id,fmt){
 
 /* ===================== 圖例 / 載入 ===================== */
 function makeRow(label,color,count,layer){
-  const row=document.createElement("div"); row.className="row";
-  row.innerHTML=`<span class="sw" style="background:${color}"></span><span>${label}${count!=null?` <span style='color:#999'>(${count})</span>`:""}</span>`;
+  const row=document.createElement("button");row.type="button"; row.className="row";row.setAttribute("aria-pressed","true");
+  row.innerHTML=`<span class="sw" style="background:${esc(color)}"></span><span>${esc(label)}${count!=null?` <span style='color:#999'>(${count})</span>`:""}</span>`;
   row.onclick=()=>{ if(!layer)return;
-    if(map.hasLayer(layer)){ map.removeLayer(layer); row.classList.add("off"); }
-    else{ map.addLayer(layer); row.classList.remove("off"); } };
+    if(map.hasLayer(layer)){ map.removeLayer(layer); row.classList.add("off");row.setAttribute("aria-pressed","false"); }
+    else{ map.addLayer(layer); row.classList.remove("off");row.setAttribute("aria-pressed","true"); } };
   return row;
 }
 function addGeoLayer(fc,color,groupLabel){
@@ -1645,48 +1652,75 @@ function addGeoLayer(fc,color,groupLabel){
   records.forEach(r=>{ if(r.parent===null && r.groupLabel===groupLabel) r.parent=layer; });
   return layer;
 }
-(async function init(){
-  initImpSwatches();
-  restoreSaved();
-  restoreImport();
-  renderImportList();
-  setTool("status");
-  if(window.innerWidth<=640){ const w=document.getElementById("legend-wrap");
-    if(w){ w.style.display="none"; const c=document.getElementById("lg-caret"); if(c) c.textContent="▸"; } }
-  let manifest;
-  try{ manifest=await (await fetch(DATA_BASE+"data/manifest.json",{cache:"no-cache"})).json(); }
-  catch(e){ document.getElementById("legend-body").textContent="尚無資料（等待首次同步）"; return; }
-  const body=document.getElementById("legend-body"); body.innerHTML="";
-
-  const uav=manifest.layers.find(l=>l.slug==="uav_restricted_airspace");
-  if(uav){
-    const h=document.createElement("h4"); h.textContent="禁限航區"; body.appendChild(h);
-    try{
-      const fc=await (await fetch(DATA_BASE+uav.geojson,{cache:"no-cache"})).json();
-      const buckets={prohibited:[],restricted:[]};
-      for(const f of fc.features) buckets[catOf(f.properties||{})].push(f);
-      for(const cat of ["prohibited","restricted"]){
-        const layer=addGeoLayer({type:"FeatureCollection",features:buckets[cat]},CAT[cat].color,CAT[cat].label);
-        layer.addTo(map);
-        body.appendChild(makeRow(CAT[cat].label,CAT[cat].color,buckets[cat].length,layer));
-      }
-    }catch(e){ console.warn("禁限航區載入失敗",e); }
-  }
-  const others=manifest.layers.filter(l=>l.slug!=="uav_restricted_airspace");
-  if(others.length){
-    const h=document.createElement("h4"); h.textContent="其他圖層"; body.appendChild(h);
-    for(const info of others){
+let loadingData=false;
+async function fetchMapJson(path){
+  const controller=new AbortController(), timer=setTimeout(()=>controller.abort(),20000);
+  try{const response=await fetch(DATA_BASE+path,{cache:'no-cache',signal:controller.signal});
+    if(!response.ok)throw new Error('HTTP '+response.status);
+    return await response.json();
+  }finally{clearTimeout(timer);}
+}
+function refreshDataStatus(){
+  const el=document.getElementById('dataStatus');
+  const summary=ReasonMapCore.querySummary([],dataState);
+  const ready=summary.kind==='clear';
+  el.classList.toggle('warning',!ready&&dataState.phase!=='loading');
+  el.textContent=dataState.phase==='loading'?'空域圖資載入中…':ready?'圖資更新 '+dataState.updated+' · 台北時間':summary.title;
+  if(dataState.phase!=='loading'&&!ready){const retry=document.createElement('button');retry.type='button';retry.textContent='重試';retry.onclick=loadMapData;el.appendChild(retry);}
+  const meta=document.getElementById('legend-meta');meta.textContent=(dataState.updated?'更新：'+dataState.updated+'（台北時間）':'')+(dataState.failed.length?' · 未取得：'+dataState.failed.map(x=>({uav_restricted_airspace:'禁限航區',temporary_area:'臨時空域',national_park:'國家公園',commercial_port:'商港區',county:'行政區界'}[x]||x)).join('、'):'');
+  if(curQuery){const sheet=document.body.dataset.sheet;curMatches=zonesAt(L.latLng(curQuery.lat,curQuery.lng));renderResult();setReadout(esc(ReasonMapCore.querySummary(curMatches,dataState).title));setMobileSheet(sheet);}
+  importedAreas.forEach(r=>{if(r.layer)r.layer.bindPopup(importPopup(r));});
+  updateApplyStatus();renderSavedAreas();
+}
+function refreshFreshness(){
+  const stale=ReasonMapCore.isStale(dataState);
+  if(stale!==dataState.stale){dataState.stale=stale;refreshDataStatus();}
+}
+setInterval(refreshFreshness,60000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)refreshFreshness();});
+async function loadMapData(){
+  if(loadingData)return;
+  loadingData=true;dataState.phase='loading';dataState.failed=[];
+  clearHighlight();
+  new Set(records.map(r=>r.parent)).forEach(layer=>{if(layer&&map.hasLayer(layer))map.removeLayer(layer);});
+  records.length=0;
+  const body=document.getElementById('legend-body');body.textContent='載入中…';refreshDataStatus();
+  try{
+    const manifest=await fetchMapJson('data/manifest.json');
+    if(!Array.isArray(manifest.layers))throw new Error('圖資總表格式錯誤');
+    const results=await Promise.all(manifest.layers.map(async info=>{
       try{
-        const fc=await (await fetch(DATA_BASE+info.geojson,{cache:"no-cache"})).json();
-        const layer=addGeoLayer(fc,info.color,info.title);
-        const row=makeRow(info.title,info.color,info.feature_count,layer); body.appendChild(row);
-        if(info.slug==="county"){ row.classList.add("off"); } else { layer.addTo(map); }
-      }catch(e){ console.warn("圖層載入失敗",info.slug,e); }
+        if(typeof info.geojson!=='string'||!/^data\/[a-z0-9_-]+\.geojson$/.test(info.geojson))throw new Error('圖層路徑錯誤');
+        const fc=await fetchMapJson(info.geojson);
+        if(!ReasonMapCore.validFeatureCollection(fc,info))throw new Error('圖層內容或筆數不完整');
+        return {info,fc};
+      }catch(error){console.warn('圖層無法載入：'+info.slug,error.message);return {info,error};}
+    }));
+    body.replaceChildren();const loaded=[];
+    for(const {info,fc,error} of results){
+      if(error){const row=document.createElement('p');row.className='msg';row.textContent=(info.title||info.slug)+'：載入失敗';body.appendChild(row);continue;}
+      if(info.slug==='uav_restricted_airspace'){
+        const buckets={prohibited:[],restricted:[]};
+        fc.features.forEach(f=>buckets[catOf(f.properties||{})].push(f));
+        for(const cat of ['prohibited','restricted']){
+          const layer=addGeoLayer({type:'FeatureCollection',features:buckets[cat]},CAT[cat].color,CAT[cat].label);layer.addTo(map);
+          body.appendChild(makeRow(CAT[cat].label,CAT[cat].color,buckets[cat].length,layer));
+        }
+      }else{
+        const layer=addGeoLayer(fc,info.color,info.title),row=makeRow(info.title,info.color,fc.features.length,layer);
+        body.appendChild(row);if(info.slug==='county'){row.classList.add('off');row.setAttribute('aria-pressed','false');}else layer.addTo(map);
+      }
+      loaded.push(info.slug);
     }
-  }
-  document.getElementById("legend-meta").innerHTML="更新："+(manifest.generated_at_taipei||"—")+"（台北時間）";
-  loadFromHash();   // 若網址帶分享狀態，還原範圍與標點
+    Object.assign(dataState,ReasonMapCore.datasetState(manifest,loaded));
+  }catch(error){dataState.phase='partial';dataState.failed=['圖資總表'];body.textContent='無法取得空域圖資，請確認網路後重試。';}
+  finally{loadingData=false;refreshDataStatus();}
+}
+(function init(){
+  initImpSwatches();restoreSaved();restoreImport();renderImportList();setTool('status');setMobileSheet('none');
+  loadMapData().then(loadFromHash);
 })();
 </script>
+<script src="search.js?v=20261010-1"></script>
 </body>
 </html>

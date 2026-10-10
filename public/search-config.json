@@ -1,0 +1,5 @@
+{
+  "endpoint": "https://photon.komoot.io/api/",
+  "autocomplete": true,
+  "minInterval": 1200
+}
